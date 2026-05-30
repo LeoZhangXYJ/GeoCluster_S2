@@ -47,13 +47,23 @@ Tuwu_Yandong_S2/
 │   ├── cluster_metrics/   # 统一聚类指标
 │   ├── cluster_spectra/   # 光谱响应分析
 │   └── final_figures/     # 最终对比图与解释图
-└── report/
-    ├── template.typ        # Typst 课程报告模板
-    ├── document.typ        # 课程论文 Typst 源文件
-    └── zjulogo.svg         # 校徽
+├── report/
+│   ├── template.typ        # Typst 课程报告模板
+│   ├── document.typ        # 课程论文 Typst 源文件
+│   ├── assets/             # 论文插图
+│   └── zjulogo.svg         # 校徽
+└── slide/
+    ├── ZJU_BeamerTemplate.tex  # Beamer 幻灯片源文件
+    ├── zju_beamer.sty          # 自定义样式文件
+    ├── references.bib          # 参考文献
+    ├── Makefile                # 编译脚本
+    ├── figures/                # 幻灯片插图素材
+    └── assets/                 # README 截图
 ```
 
 ## 运行顺序
+
+数据预处理与聚类分析：
 
 ```bash
 python scripts/preprocess_s2.py
@@ -67,9 +77,16 @@ python scripts/make_final_figures.py
 python scripts/make_interpretation_map.py
 ```
 
-编译论文 PDF：
+编译课程论文（Typst）：
+
 ```bash
 cd report && typst compile document.typ
+```
+
+编译幻灯片（LaTeX Beamer，需要 XeLaTeX + BibTeX）：
+
+```bash
+cd slide && make
 ```
 
 ## 方法概述
