@@ -1,0 +1,83 @@
+from pathlib import Path
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+ROOT = Path(__file__).parent.parent.resolve()
+
+processed = ROOT / "data" / "processed"
+baseline_dir = ROOT / "results" / "cluster_baseline"
+pca_dir = ROOT / "results" / "cluster_pca"
+ae_dir = ROOT / "results" / "cluster_ae"
+sae_dir = ROOT / "results" / "cluster_sae"
+out_dir = ROOT / "results" / "final_figures"
+out_dir.mkdir(exist_ok=True)
+
+# === 2×3 综合对比图 ===
+items_2x3 = [
+    ("(a) True color: B04/B03/B02", processed / "preview_true_color_B04_B03_B02.png"),
+    ("(b) Geology false color: B12/B8A/B02", processed / "preview_geology_B12_B8A_B02.png"),
+    ("(c) Raw K-means, k=5", baseline_dir / "kmeans_baseline_k5.png"),
+    ("(d) PCA + K-means, z=5, k=6", pca_dir / "pca_kmeans_z5_k6.png"),
+    ("(e) Canonical AE + K-means, z=5, k=6", ae_dir / "ae_kmeans_k6_z5.png"),
+    ("(f) SAE + K-means, z=5, k=6", sae_dir / "sae_kmeans_k6_z5.png"),
+]
+
+fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+
+for ax, (title, path) in zip(axes.ravel(), items_2x3):
+    img = mpimg.imread(path)
+    ax.imshow(img)
+    ax.set_title(title, fontsize=11)
+    ax.axis("off")
+
+plt.tight_layout()
+plt.savefig(out_dir / "final_comparison_2x3.png", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x3.pdf", dpi=300, bbox_inches="tight")
+plt.close()
+
+# === 2×2 四合一对比图（保持兼容旧版） ===
+items_2x2 = [
+    ("(a) True color: B04/B03/B02", processed / "preview_true_color_B04_B03_B02.png"),
+    ("(b) Geology false color: B12/B8A/B02", processed / "preview_geology_B12_B8A_B02.png"),
+    ("(c) Baseline K-means, k=5", baseline_dir / "kmeans_baseline_k5.png"),
+    ("(d) SAE + K-means, z=5, k=6", sae_dir / "sae_kmeans_k6_z5.png"),
+]
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+for ax, (title, path) in zip(axes.ravel(), items_2x2):
+    img = mpimg.imread(path)
+    ax.imshow(img)
+    ax.set_title(title, fontsize=12)
+    ax.axis("off")
+
+plt.tight_layout()
+plt.savefig(out_dir / "final_comparison_2x2.png", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x2.pdf", dpi=300, bbox_inches="tight")
+plt.close()
+
+# === 三方法聚类对比图（Raw / PCA / AE / SAE） ===
+items_4methods = [
+    ("(a) Raw K-means, k=5", baseline_dir / "kmeans_baseline_k5.png"),
+    ("(b) PCA + K-means, z=5, k=6", pca_dir / "pca_kmeans_z5_k6.png"),
+    ("(c) Canonical AE + K-means, z=5, k=6", ae_dir / "ae_kmeans_k6_z5.png"),
+    ("(d) SAE + K-means, z=5, k=6", sae_dir / "sae_kmeans_k6_z5.png"),
+]
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+for ax, (title, path) in zip(axes.ravel(), items_4methods):
+    img = mpimg.imread(path)
+    ax.imshow(img)
+    ax.set_title(title, fontsize=12)
+    ax.axis("off")
+
+plt.tight_layout()
+plt.savefig(out_dir / "method_comparison_2x2.png", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "method_comparison_2x2.pdf", dpi=300, bbox_inches="tight")
+plt.close()
+
+print("Saved to:", out_dir)
+print("  final_comparison_2x3.png/pdf")
+print("  final_comparison_2x2.png/pdf")
+print("  method_comparison_2x2.png/pdf")
