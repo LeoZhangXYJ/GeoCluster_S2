@@ -1,0 +1,370 @@
+%# -*- coding:utf-8 -*-
+% Course project slides for Remote Sensing Geoscience Analysis
+
+\PassOptionsToPackage{quiet}{fontspec}
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage{zju_beamer}
+\graphicspath{{./figures/}}
+\zjusectioncolor{blue}
+
+% Lightweight helpers for compact academic slides.
+\newcommand{\metric}[1]{\textcolor{MidnightBlue}{\textbf{#1}}}
+\newcommand{\method}[1]{\textbf{#1}}
+\newcommand{\imgfit}[2][0.95\linewidth]{%
+  \IfFileExists{#2}{%
+    \includegraphics[width=#1,height=0.65\textheight,keepaspectratio]{#2}%
+  }{%
+    \fbox{\parbox[c][0.24\textheight][c]{#1}{\centering\tiny
+      图像文件暂未生成\\[0.4em]\texttt{\detokenize{#2}}\\[0.4em]
+      请按 README 运行实验脚本后重新编译}}%
+  }%
+}
+
+% 首页信息设置
+\title[Sentinel-2 岩性聚类]{基于自编码器与 K-means 的\\Sentinel-2 多光谱遥感影像岩性聚类研究}
+\subtitle{《遥感地学分析》课程大作业展示}
+\author[XXX]{XXX}
+\institute[ZJU]{浙江大学}
+\date{2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}
+  \frametitle{汇报目录}
+  \tableofcontents
+\end{frame}
+
+\section{研究背景}
+
+\begin{frame}{研究动机}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\linewidth}
+      \begin{block}{问题背景}
+        \begin{itemize}
+          \item 干旱裸露矿区植被覆盖低，适合利用多光谱影像识别岩性与蚀变信息。
+          \item 遥感地质填图常缺少可靠地面标签，监督分类难以直接展开。
+          \item 无监督聚类可从光谱数据中发现自然分组，形成初步地质解译线索。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.43\linewidth}
+      \begin{block}{核心问题}
+        \small
+        线性降维是否足够？\\[0.4em]
+        自编码器是否能学习更适合聚类的低维光谱表示？\\[0.4em]
+        聚类类别能否获得可解释的地质含义？
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{研究区与数据}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.33\linewidth}
+      \begin{itemize}
+        \item 研究区：新疆哈密土屋--延东斑岩型铜矿区。
+        \item 数据源：Sentinel-2A MSI Level-2A 地表反射率。
+        \item 影像日期：2024-08-13，Tile：T46TFM。
+        \item AOI：94.30$^\circ$E--94.70$^\circ$E，42.02$^\circ$N--42.32$^\circ$N。
+        \item 使用 B02--B12 中 10 个可见光、近红外和短波红外波段。
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.62\linewidth}
+      \centering
+      \imgfit[\linewidth]{../data/processed/preview_geology_B12_B8A_B02.png}
+      \vspace{0.3em}
+
+      \scriptsize Sentinel-2 B12/B8A/B02 地质假彩色合成
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{数据与方法}
+
+\begin{frame}{预处理流程}
+  \begin{block}{从 SAFE 产品到聚类输入}
+    \begin{enumerate}
+      \item 解压 Sentinel-2 L2A SAFE 产品，提取 10 个光谱波段与 SCL 波段。
+      \item 将所有波段统一重采样到 20 m 空间分辨率。
+      \item 按 AOI 裁剪研究区，使用 SCL 去除云、阴影、水体和无效像元。
+      \item 对有效像元进行光谱标准化，得到 10 维特征矩阵。
+    \end{enumerate}
+  \end{block}
+  \begin{center}
+    \Large
+    最终数据集：\metric{2,772,025} 个有效像元 $\times$ \metric{10} 个光谱波段
+  \end{center}
+\end{frame}
+
+\begin{frame}{四组对比方法}
+  \small
+  \begin{table}
+    \centering
+    \resizebox{\linewidth}{!}{%
+      \begin{tabular}{llll}
+        \hline
+        方法 & 特征类型 & 维度 & 作用 \\
+        \hline
+        Raw K-means & 原始标准化光谱 & 10 & 无降维基线 \\
+        PCA + K-means & 线性主成分 & 3 / 5 & 检验线性降维是否足够 \\
+        Canonical AE + K-means & 浅层非线性隐特征 & 5 & 非线性强基线 \\
+        Stacked AE + K-means & 深层非线性隐特征 & 3 / 4 / 5 & 主体方法，对齐 Naagar 等框架 \\
+        \hline
+      \end{tabular}}
+  \end{table}
+  \vspace{0.7em}
+  \begin{block}{实验逻辑}
+    \centering
+    Raw 基线 $\rightarrow$ PCA 线性降维 $\rightarrow$ 浅层 AE 非线性表示 $\rightarrow$ 深层 SAE 层级表示
+  \end{block}
+\end{frame}
+
+\begin{frame}{自编码器模型结构}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\linewidth}
+      \begin{block}{Canonical AE}
+        \centering
+        \Large
+        $10 \rightarrow 16 \rightarrow 5 \rightarrow 16 \rightarrow 10$
+      \end{block}
+      \small
+      浅层非线性变换，用于检验是否只需较简单的 encoder--decoder 即可捕获主要聚类判别结构。
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{block}{Stacked AE}
+        \centering
+        \Large
+        $10 \rightarrow 32 \rightarrow 16 \rightarrow z \rightarrow 16 \rightarrow 32 \rightarrow 10$
+      \end{block}
+      \small
+      逐层压缩光谱信息，实验 $z=3,4,5$，用于分析 bottleneck 维度与网络深度的影响。
+    \end{column}
+  \end{columns}
+  \vspace{1em}
+  \begin{equation*}
+    \mathcal{L}_{\mathrm{MSE}}=\frac{1}{N}\sum_{i=1}^{N}\|x_i-\hat{x}_i\|^2
+  \end{equation*}
+\end{frame}
+
+\begin{frame}{评价指标}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\linewidth}
+      \begin{block}{Silhouette $\uparrow$}
+        \small
+        衡量簇内紧凑性与簇间分离性，越接近 1 越好。
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \begin{block}{DBI $\downarrow$}
+        \small
+        衡量簇之间的平均相似度，越低表示簇间分离更清晰。
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \begin{block}{CHI $\uparrow$}
+        \small
+        衡量簇间离散度与簇内离散度之比，越高表示聚类结构更优。
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{1em}
+  \begin{center}
+    全量样本规模较大，三项指标在固定随机种子下抽样 \metric{100,000} 个有效像元计算。
+  \end{center}
+\end{frame}
+
+\section{实验结果}
+
+\begin{frame}{Baseline 与 PCA：线性降维提升有限}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.33\linewidth}
+      \begin{itemize}
+        \item Raw K-means 通过 Elbow 方法自动选择 \metric{$k=5$}。
+        \item Baseline：Silhouette=0.3709，DBI=0.8039，CHI=123,898。
+        \item PCA 前 3 个主成分累计解释 \metric{99.53\%} 方差。
+        \item 但 PCA $z=3$ 的 CHI 仅提升到 127,301，增益约 \metric{+2.7\%}。
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.62\linewidth}
+      \centering
+      \imgfit[\linewidth]{../results/cluster_pca/pca_explained_variance.png}
+      \vspace{0.3em}
+
+      \scriptsize PCA 方差解释分析
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{自编码器训练：SAE 重建更精确}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.36\linewidth}
+      \small
+      \begin{table}
+        \centering
+        \begin{tabular}{lcc}
+          \hline
+          方法 & 参数量 & 最终 MSE \\
+          \hline
+          Canonical AE $z=5$ & 1,067 & 0.00466 \\
+          SAE $z=5$ & 1,699 & \metric{0.00285} \\
+          \hline
+        \end{tabular}
+      \end{table}
+      \vspace{0.4em}
+      \begin{itemize}
+        \item SAE 在早期训练阶段即取得更低重建损失。
+        \item 更深层级结构保留了更精细的波段间关系。
+        \item 但更低 MSE 不必然意味着所有聚类指标都全面领先。
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.59\linewidth}
+      \centering
+      \imgfit[\linewidth]{../results/cluster_sae/sae_training_loss_z5.png}
+      \vspace{0.3em}
+
+      \scriptsize SAE $z=5$ 训练损失曲线
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{综合聚类指标对比}
+  \scriptsize
+  \begin{table}
+    \centering
+    \resizebox{\linewidth}{!}{%
+      \begin{tabular}{lcccccc}
+        \hline
+        Method & Dim. & $k$ & Silhouette $\uparrow$ & DBI $\downarrow$ & CHI $\uparrow$ & Recon. MSE \\
+        \hline
+        Raw K-means & 10 & 5 & 0.3709 & 0.8039 & 123,898 & -- \\
+        PCA + K-means & 3 & 5 & 0.3796 & 0.7885 & 127,301 & -- \\
+        PCA + K-means & 5 & 6 & 0.3322 & 0.8864 & 112,440 & -- \\
+        Canonical AE + K-means & 5 & 6 & \metric{0.4166} & 0.7338 & \metric{147,239} & 0.00466 \\
+        SAE + K-means & 5 & 6 & 0.4165 & \metric{0.6981} & 144,423 & \metric{0.00285} \\
+        \hline
+      \end{tabular}}
+  \end{table}
+  \vspace{0.5em}
+  \begin{itemize}
+    \item 非线性自编码器特征整体优于 Raw 和 PCA 基线。
+    \item Canonical AE 的 CHI 略高，说明浅层非线性已能捕获主要判别结构。
+    \item SAE 的 DBI 与重建误差更优，因此作为最终地质解释主结果。
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{四种方法空间结果对比}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.78\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.80\textheight,keepaspectratio]{../results/final_figures/method_comparison_2x2.png}
+    \end{column}
+    \begin{column}{0.18\linewidth}
+      \small
+      \begin{itemize}
+        \item Raw 结果存在较明显空间破碎。
+        \item PCA 对整体空间格局改善有限。
+        \item AE 与 SAE 产生更紧凑的低维光谱表示。
+        \item SAE 在空间连续性与细粒度类别保留之间较均衡。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{SAE 消融：Bottleneck 维度影响聚类稳定性}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k5_z3.png}
+      \scriptsize $z=3,k=5$：最大类 48.9\%，类别塌缩
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z4.png}
+      \scriptsize $z=4,k=6$：类别结构恢复
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z5.png}
+      \scriptsize \metric{$z=5,k=6$}：最终解释配置
+    \end{column}
+  \end{columns}
+  \vspace{0.5em}
+  \begin{center}
+    过窄 bottleneck 会压缩掉关键光谱差异，$z=5$ 在压缩与可分性之间更稳健。
+  \end{center}
+\end{frame}
+
+\section{地质解释}
+
+\begin{frame}{聚类类别的光谱响应}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.70\linewidth}
+      \centering
+      \imgfit[\linewidth]{../results/cluster_spectra/cluster_spectral_profiles.png}
+    \end{column}
+    \begin{column}{0.26\linewidth}
+      \small
+      \begin{block}{Cluster 1}
+        \begin{itemize}
+          \item B11/B12 = \metric{0.992}，为 6 类中最低。
+          \item B11 $\rightarrow$ B12 出现明显反射率下降。
+          \item B12 约 2190 nm，对 Al--OH、Mg--OH 蚀变矿物吸收敏感。
+        \end{itemize}
+      \end{block}
+      \small
+      因此 Cluster 1 可解释为高置信度热液蚀变候选类。
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{最终遥感地质解释图}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.78\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../results/final_figures/python_final_interpretation_map.png}
+    \end{column}
+    \begin{column}{0.18\linewidth}
+      \small
+      \begin{itemize}
+        \item 底图：B12/B8A/B02 地质假彩色影像。
+        \item 叠加层：SAE $z=5,k=6$ 聚类结果。
+        \item Cluster 1 以轮廓强调，作为蚀变候选区域。
+      \end{itemize}
+      \vspace{0.2em}
+      \begin{block}{注意}
+        \tiny
+        该图是基于无监督聚类的光谱推断，未经过野外验证，不应视为正式地质图。
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{结论}
+
+\begin{frame}{结论与展望}
+  \small
+  \begin{block}{主要结论}
+    \begin{enumerate}
+      \item 构建了土屋--延东地区 Sentinel-2 10 波段预处理与无监督岩性聚类流程。
+      \item 非线性 AE 表示整体优于 Raw 与 PCA；SAE 在 DBI 和 MSE 上更优，适合作为最终解释主结果。
+      \item Cluster 1 呈现明确 SWIR 吸收特征，可作为热液蚀变候选类。
+    \end{enumerate}
+  \end{block}
+  \begin{block}{局限与后续工作}
+    \scriptsize
+    局限：缺少地面真值验证；全连接 AE 未利用空间邻域；仅使用单时相影像；K-means 对非球形光谱簇适应性有限。后续可引入野外样点、卷积自编码器、多时相数据和更灵活的聚类模型。
+  \end{block}
+\end{frame}
+
+\section{参考文献}
+\begin{frame}[allowframebreaks]
+  \frametitle{参考文献}
+  \reference
+\end{frame}
+
+\end{document}
