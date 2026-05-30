@@ -89,3 +89,10 @@ cd report && typst compile document.typ
 
 - 最终输出的"遥感地质解释图"是基于无监督聚类结果的**光谱推断**，未经过野外验证，不应视为正式地质图。
 - Canonical AE 在部分聚类指标上表现很强；SAE 在重建误差、簇紧凑性和原论文框架一致性方面更适合作为最终解释结果。因此本文采用 SAE z=5, k=6 作为主要地质解释图，同时保留 Canonical AE 作为强基线。
+
+## 模板致谢
+
+本项目报告和幻灯片分别基于以下开源模板修改：
+
+- **Typst 课程报告模板**：[ZJU-Project-Report-Template](https://github.com/memset0/ZJU-Project-Report-Template)（`report/` 目录，已做一定修改）
+- **LaTeX Beamer 幻灯片模板**：[ZJU-Beamer-Template](https://github.com/qychen2001/ZJU-Beamer-Template)（`slide/` 目录）
