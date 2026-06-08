@@ -172,6 +172,13 @@
     if (table_of_contents == none) {
       table_of_contents = true
     }
+  } else if (theme == "journal") {
+    if (language == none) {
+      language = "cn"
+    }
+    if (table_of_contents == none) {
+      table_of_contents = false
+    }
   }
   // fallback
   if (language == none) {
@@ -183,13 +190,27 @@
 
   set document(author: (author), title: title)
 
-  set page(numbering: "1", number-align: center)
+  if (theme == "journal") {
+    set page(
+      paper: "a4",
+      margin: (x: 18mm, y: 18mm),
+      numbering: "1",
+      number-align: center,
+    )
+  } else {
+    set page(numbering: "1", number-align: center)
+  }
 
-  set text(font: font_serif, lang: language, size: 10pt)
+  let body_text_size = if theme == "journal" { 10pt } else { 10pt }
+  set text(font: font_serif, lang: language, size: body_text_size)
   show raw: set text(font: font_mono)
   show math.equation: set text(weight: 400)
 
-  set par(spacing: 0.85em, leading: 0.75em)
+  if (theme == "journal") {
+    set par(spacing: 0.55em, leading: 0.82em)
+  } else {
+    set par(spacing: 0.85em, leading: 0.75em)
+  }
 
   // Update global state
   state-course.update(course)
@@ -304,6 +325,30 @@
     )
     v(4fr)
     pagebreak()
+  } else if (theme == "journal") {
+    {
+      set align(center)
+      block(width: 100%, below: 0.9em)[
+        #set par(first-line-indent: 0em, spacing: 0.45em, leading: 0.55em)
+        #text(font: (..font_serif, ..font_sans_serif), size: 16pt, weight: 700, title)
+        #v(0.35em)
+        #if (author != none) [
+          #text(size: 10pt, author)
+        ]
+        #if (course != none or college != none or major != none) [
+          #text(size: 8.6pt, fill: luma(35))[
+            #if (college != none) [#college]
+            #if (college != none and major != none) [，]
+            #if (major != none) [#major]
+            #if ((college != none or major != none) and course != none) [；]
+            #if (course != none) [#course]
+          ]
+        ]
+        #if (date != none) [
+          #text(size: 8.6pt, fill: luma(35), date)
+        ]
+      ]
+    }
   } else if (theme == "nocover") {
     // no cover page
   } else {
@@ -323,6 +368,7 @@
 
   set par(justify: true)
   set table(align: center + horizon, stroke: 0.5pt)
+  set figure.caption(separator: ".")
 
   show raw.where(block: false): it => box(it, fill: luma(240), stroke: luma(160) + 0.5pt, inset: (left: 0.25em, right: 0.25em), outset: (top: 0.35em, bottom: 0.35em), radius: 0.35em)
 
@@ -378,6 +424,40 @@
       },
     )
 
+    body
+  } else if (theme == "journal") {
+    // Journal theme: remove gray background box from inline code
+    show raw.where(block: false): it => it
+
+    set figure(supplement: "图")
+    set figure.caption(separator: "  ")
+    set figure(placement: none)
+
+    set heading(
+      numbering: (..args) => {
+        let nums = args.pos()
+        if nums.len() == 1 {
+          return numbering("1. ", ..nums)
+        } else if nums.len() == 2 {
+          return numbering("1.1 ", ..nums)
+        } else {
+          return numbering("1.1.1 ", ..nums)
+        }
+      },
+    )
+    show heading: it => block(above: 0.85em, below: 0.35em, it)
+    show heading.where(level: 1): it => {
+      set text(size: 11pt, weight: 700)
+      block(above: 1em, below: 0.45em, it)
+    }
+    show heading.where(level: 2): it => {
+      set text(size: 10pt, weight: 700)
+      block(above: 0.75em, below: 0.3em, it)
+    }
+    show heading.where(level: 3): it => {
+      set text(size: 9.6pt, weight: 600, style: "italic")
+      block(above: 0.7em, below: 0.45em, it)
+    }
     body
   } else {
     body
@@ -555,72 +635,109 @@
   cell-align: center + horizon,
   columns: 1fr,
   size: 8.8pt,
+  width: auto,
 ) = {
   align(center)[
-    #set text(size: size)
-    #tablex(
-      columns: (auto,),
-      inset: 0pt,
-      stroke: 0pt,
-      map-hlines: h => {
-        if (h.y > 0) {
-          (..h, stroke: (stroke * 2) + black)
-        } else {
-          h
-        }
-      },
-      tablex(
-        ..args,
-        inset: inset,
-        stroke: stroke,
-        align: cell-align,
-        columns: columns,
-        map-cells: cell => {
-          if (cell.y == 0) {
-            strong(cell.content)
-          } else {
-            cell.content
-          }
-        },
+    #block(width: width)[
+      #set text(size: size)
+      #tablex(
+        columns: (auto,),
+        inset: 0pt,
+        stroke: 0pt,
         map-hlines: h => {
-          if (h.y == 0) {
+          if (h.y > 0) {
             (..h, stroke: (stroke * 2) + black)
-          } else if (h.y == 1) {
-            (..h, stroke: stroke + black)
           } else {
-            (..h, stroke: 0pt)
+            h
           }
         },
-        auto-vlines: false,
-      ),
-    )
+        tablex(
+          ..args,
+          inset: inset,
+          stroke: stroke,
+          align: cell-align,
+          columns: columns,
+          map-cells: cell => {
+            if (cell.y == 0) {
+              strong(cell.content)
+            } else {
+              cell.content
+            }
+          },
+          map-hlines: h => {
+            if (h.y == 0) {
+              (..h, stroke: (stroke * 2) + black)
+            } else if (h.y == 1) {
+              (..h, stroke: stroke + black)
+            } else {
+              (..h, stroke: 0pt)
+            }
+          },
+          auto-vlines: false,
+        ),
+      )
+    ]
   ]
 }
 
 #let tablecaption(it) = {
-  block(width: 100%, above: 0em, below: 0.25em)[
+  block(width: 100%, above: 0.35em, below: 0.25em)[
     #set align(center)
-    #set text(size: 9pt, weight: 500)
+    #set text(size: 8pt, weight: 500)
     #it
   ]
 }
 
 #let figurex(img, caption) = {
   show figure.caption: it => {
-    block(above: 0.25em, below: 0.75em, width: 100%)[
+    block(above: 0.2em, below: 0.55em, width: 100%)[
       #set align(center)
-      #set text(size: 0.86em, fill: luma(40), weight: 400)
+      #set text(size: 0.84em, fill: luma(40), weight: 400)
       #it
     ]
   }
-  set figure.caption(separator: ".")
   figure(
+    kind: image,
     img,
     caption: [
       #set text(weight: 400)
       #caption
     ],
   )
+}
+
+#let figurewide(img, caption) = {
+  show figure.caption: it => {
+    block(above: 0.2em, below: 0.6em, width: 100%)[
+      #set align(center)
+      #set text(size: 0.84em, fill: luma(40), weight: 400)
+      #it
+    ]
+  }
+  block(width: 100%, above: 0.45em, below: 0.45em)[
+    #figure(
+      kind: image,
+      block(width: 98%, img),
+      caption: [
+        #set text(weight: 400)
+        #caption
+      ],
+    )
+  ]
+}
+
+#let tablewide(caption, body) = {
+  block(width: 100%, above: 0.45em, below: 0.45em)[
+    #tablecaption(caption)
+    #body
+  ]
+}
+
+#let tablefit(caption, body) = {
+  block(width: 100%, above: 0.45em, below: 0.45em)[
+    #tablecaption(caption)
+    #body
+  ]
 }
 
 #let blockx(it, name: "", color: red, theme: none) = {
@@ -732,11 +849,11 @@
   } else {
     strong("摘要")
   }
-  block(width: 100%, above: 0.8em, below: 0.35em, inset: (left: 1.6em, right: 1.6em, top: 0.35em, bottom: 0.25em))[
-    #set text(size: 9pt)
+  block(width: 100%, above: 0.55em, below: 0.25em, inset: (left: 0em, right: 0em, top: 0.25em, bottom: 0.2em))[
+    #set text(size: 8.4pt)
     #set par(first-line-indent: 0em, justify: true, spacing: 0.55em, leading: 0.65em)
     #align(center)[
-      #set text(size: 10pt, weight: 700)
+      #set text(size: 9pt, weight: 700)
       #title
     ]
     #v(0.35em)
@@ -757,8 +874,8 @@
   } else {
     "："
   }
-  block(width: 100%, above: 0em, below: 0.8em, inset: (left: 1.6em, right: 1.6em, top: 0em, bottom: 0em))[
-    #set text(size: 9pt)
+  block(width: 100%, above: 0em, below: 0.55em, inset: (left: 0em, right: 0em, top: 0em, bottom: 0em))[
+    #set text(size: 8.4pt)
     #set par(first-line-indent: 0em, justify: true, spacing: 0.45em, leading: 0.6em)
     #strong(label)#sep#it
   ]
