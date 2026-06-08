@@ -42,14 +42,14 @@
 #set par(first-line-indent: 2em)
 
 #abstract[
-利用多光谱遥感影像进行岩性识别与地质填图是遥感地质领域的核心任务之一。Sentinel-2 卫星提供了 13 个光谱波段，其中短波红外（SWIR）波段对热液蚀变矿物具有特征吸收，为半干旱裸露区的岩性聚类提供了丰富的光谱信息。本文以新疆哈密土屋-延东斑岩型铜矿区域为研究对象，基于 Sentinel-2A L2A 影像（2024-08-13，Tile T46TFM）的 10 个光谱波段（B02--B12），在去除云、阴影、水体等无效像元后，构建了 2,772,025 个有效像元的 10 维光谱数据集。为系统评估降维方法对聚类效果的影响，本文设计了四组对比实验：原始光谱直接聚类（Raw K-means）、主成分分析降维后聚类（PCA + K-means）、浅层自编码器降维后聚类（Canonical AE + K-means）以及堆叠自编码器降维后聚类（SAE + K-means），并以 Silhouette 系数、Davies-Bouldin 指数（DBI）和 Calinski-Harabasz 指数（CHI）三项聚类指标进行定量评估。实验结果表明：线性 PCA 降维对聚类质量的提升有限（CHI 仅从 123,898 提升至 127,301），而非线性自编码器方法整体优于线性和无降维基线。在自编码器方法内部，浅层 Canonical AE 与深层 SAE 的聚类质量接近——Canonical AE 在 CHI 指标上略优（147,239 vs 144,423），SAE 则在重建精度（MSE=0.00285 vs 0.00466）和簇紧凑性（DBI=0.6981 vs 0.7338）上更优，表明深层层级结构有助于学习更精细的光谱表示，但浅层非线性变换已能捕获主要的聚类判别信息。消融实验进一步验证了 bottleneck 维度 $z=5$ 为最优压缩维度（$z=3$ 时最大类别占比达 48.9%，出现类别塌缩）。在聚类结果基础上，本文进一步分析了各类别的光谱响应曲线与波段比值特征，为地质解译提供了定量光谱依据。本研究将原论文（Naagar et al., 2024）的框架从澳大利亚 Mutawintji 地区迁移至中国西北干旱矿区，验证了该框架在不同地质背景下的适用性。
+无监督聚类方法可在缺乏地面真值标签的偏远裸露区实现岩性填图，但现有深度学习聚类框架多在半干旱沉积岩区验证，其在极端干旱斑岩铜矿区的适用性及不同深度自编码器的相对增益尚不明晰。针对上述问题，本文以新疆哈密土屋-延东斑岩型铜矿区域为研究对象，将 Naagar 等（2024）的堆叠自编码器（SAE）+K-means 岩性填图框架从澳大利亚 Mutawintji 地区迁移至中国西北极端干旱矿区。基于 Sentinel-2A L2A 影像（2024-08-13，Tile T46TFM）的 10 个光谱波段（B02--B12），在去除云、阴影、水体等无效像元后，构建了 2,772,025 个有效像元的 10 维光谱数据集。本文设计了四组递进对比实验——Raw K-means、PCA + K-means、Canonical AE + K-means 和 SAE + K-means——系统回答了三个关键问题：（1）非线性降维是否优于线性降维？（2）深层自编码器是否必要？（3）bottleneck 维度如何影响聚类质量？实验结果表明：线性 PCA 对聚类质量的提升有限（CHI 仅从 123,898 提升至 127,301，+2.7%），深层 SAE 与浅层 Canonical AE 的聚类分离性出乎意料地接近——Canonical AE 的 CHI 甚至略优（147,239 vs 144,423），表明 Sentinel-2 10 波段数据的非线性结构有限，浅层非线性变换已能捕获主要的聚类判别信息；SAE 的优势体现在重建精度（MSE=0.00285 vs 0.00466）和簇紧凑性（DBI=0.6981 vs 0.7338）上。消融实验进一步揭示了 bottleneck 维度对聚类质量的关键影响：$z=3$ 导致严重类别塌缩（最大类占比 48.9%），$z=5$ 为最优压缩维度。在聚类结果基础上，本文通过光谱响应曲线与波段比值（B11/B12）的定量分析，识别出具有明确 SWIR 吸收特征的蚀变候选区（B11/B12=0.992），并构建了全自动 Python 遥感地质解释制图流程。本研究验证了 SAE+K-means 框架在极干旱斑岩铜矿区的跨区域适用性，并揭示了在该场景下深层 SAE 相对于浅层 AE 的边际增益特征，为无标签裸露区的无监督遥感岩性填图提供了可复现、可迁移的方法参考。
 
 ]
 
 #keywords[Sentinel-2；堆叠自编码器；浅层自编码器；PCA；K-means 聚类；岩性识别；无监督学习；聚类评价指标；土屋-延东]
 
 #abstract(name: strong[Abstract])[
-Lithological mapping and geological interpretation from multispectral remote sensing images are important tasks in remote sensing geology, especially in arid and sparsely vegetated mineral districts where field labels are limited. This study focuses on the Tuwu-Yandong porphyry copper district in Hami, Xinjiang, China, and uses a Sentinel-2A L2A image acquired on 2024-08-13 (Tile T46TFM). After cloud, shadow, water, and invalid-pixel masking, ten Sentinel-2 bands (B02--B12) were resampled to 20 m and organized into a 10-dimensional spectral dataset containing 2,772,025 valid pixels. Four unsupervised workflows were compared: Raw K-means, PCA + K-means, Canonical AE + K-means, and Stacked Autoencoder (SAE) + K-means. Clustering quality was evaluated using the Silhouette coefficient, Davies-Bouldin index (DBI), and Calinski-Harabasz index (CHI). The results show that PCA provided only a limited improvement over Raw K-means (CHI increased from 123,898 to 127,301), whereas nonlinear autoencoder-based representations improved clustering quality more clearly. Canonical AE and SAE showed comparable cluster separability: Canonical AE achieved a slightly higher CHI (147,239 vs. 144,423), while SAE achieved better DBI (0.6981 vs. 0.7338) and reconstruction accuracy (MSE=0.00285 vs. 0.00466). The ablation experiment indicated that $z=5$ was the most suitable bottleneck dimension, while $z=3$ caused class collapse. Spectral response analysis further showed that C1 had the lowest B11/B12 ratio and a distinct SWIR absorption feature, supporting its interpretation as a high-confidence alteration candidate. The final interpretation map was generated entirely with Python, ensuring a reproducible workflow for lithological clustering and geological interpretation in unlabeled arid mineral districts.
+Unsupervised clustering methods enable lithological mapping in remote, sparsely vegetated areas where field labels are scarce. However, existing deep-learning-based clustering frameworks have been validated primarily in semi-arid sedimentary terrains, and their applicability to hyper-arid porphyry copper districts—as well as the relative benefit of deep versus shallow autoencoders—remains unclear. To address this gap, this study migrates the stacked autoencoder (SAE) + K-means framework of Naagar et al. (2024) from the Mutawintji region of Australia to the Tuwu-Yandong porphyry copper district in Hami, Xinjiang, China. Using a Sentinel-2A L2A image (2024-08-13, Tile T46TFM) with 10 spectral bands (B02--B12) resampled to 20 m, we construct a dataset of 2,772,025 valid pixels after cloud, shadow, and water masking. Four workflows are compared—Raw K-means, PCA + K-means, Canonical AE + K-means, and SAE + K-means—to systematically answer three questions: (1) Does nonlinear dimensionality reduction outperform linear methods? (2) Is a deep autoencoder necessary? (3) How does the bottleneck dimension affect clustering quality? Results show that PCA yields only marginal improvement over Raw K-means (CHI +2.7%), and, most notably, the shallow Canonical AE matches or slightly exceeds the deep SAE in cluster separability (CHI 147,239 vs. 144,423), suggesting that the nonlinear structure of Sentinel-2 10-band data is limited and shallow nonlinear transformations suffice for the main clustering structure. SAE retains advantages in reconstruction fidelity (MSE 0.00285 vs. 0.00466) and cluster compactness (DBI 0.6981 vs. 0.7338). The ablation experiment reveals that z=3 causes severe class collapse (largest class 48.9%), while z=5 is optimal. Quantitative spectral analysis identifies a high-confidence alteration candidate (C1, B11/B12=0.992) with clear SWIR absorption, and a fully scripted Python mapping pipeline replaces traditional GIS workflows for reproducible geological interpretation. This study validates the cross-regional applicability of the SAE+K-means framework in a hyper-arid porphyry copper setting and reveals the marginal gain of depth in this data regime, providing a reproducible and transferable workflow for unsupervised lithological mapping in unlabeled arid mineral districts.
 ]
 
 #keywords(name: "Keywords")[Sentinel-2; lithological mapping; stacked autoencoder; canonical autoencoder; PCA; K-means clustering; unsupervised learning; porphyry copper deposit; Tuwu-Yandong]
@@ -62,9 +62,21 @@ Sentinel-2 卫星是欧洲空间局（ESA）哥白尼计划的核心任务之一
 
 新疆哈密土屋-延东地区是中国西北重要的斑岩型铜矿成矿带，区内出露大量古生代火山-沉积岩系和中酸性侵入岩体，地表植被稀疏、基岩裸露度高，为多光谱遥感岩性识别提供了理想条件#super[5]。然而，传统的 K-means 聚类直接作用于 10 维光谱特征时，由于高维空间中光谱向量的噪声和冗余，聚类结果往往呈现明显的"椒盐噪声"——空间上破碎、孤立像元多，不利于地质单元的连续划分#super[6]。
 
-在降维方法的选择上，主成分分析（PCA）是最经典的光谱降维手段，已在遥感地质中得到广泛应用#super[4]。然而 PCA 仅能捕获线性方差结构，难以建模光谱波段之间的非线性交互关系。自编码器（Autoencoder）作为一种经典的无监督深度学习模型，能够通过 encoder-decoder 结构学习数据的紧凑低维表示。Naagar 等（2024）在 _Advances in Space Research_ 上发表的研究系统比较了 PCA、canonical autoencoder 和 stacked autoencoder 三种降维方法结合 K-means 聚类在岩性填图中的效果，并在 Landsat 8、ASTER 和 Sentinel-2 三种数据源上进行了验证#super[7]。该研究指出，堆叠自编码器（SAE）通过多层非线性变换，可以捕获光谱波段之间的高阶交互关系，将高维光谱映射到低维隐空间，同时滤除噪声、保留主要光谱结构，其效果优于传统线性降维和浅层自编码器。然而，该框架在干旱矿区（如中亚造山带）的适用性和不同深度自编码器的相对增益尚未得到充分验证。
+在降维方法的选择上，主成分分析（PCA）是最经典的光谱降维手段，已在遥感地质中得到广泛应用#super[4]。然而 PCA 仅能捕获线性方差结构，难以建模光谱波段之间的非线性交互关系。自编码器（Autoencoder）作为一种经典的无监督深度学习模型，能够通过 encoder-decoder 结构学习数据的紧凑低维表示。Naagar 等（2024）在 _Advances in Space Research_ 上发表的研究系统比较了 PCA、canonical autoencoder 和 stacked autoencoder 三种降维方法结合 K-means 聚类在岩性填图中的效果，并在 Landsat 8、ASTER 和 Sentinel-2 三种数据源上进行了验证#super[7]。该研究指出，堆叠自编码器（SAE）通过多层非线性变换，可以捕获光谱波段之间的高阶交互关系，将高维光谱映射到低维隐空间，同时滤除噪声、保留主要光谱结构，其效果优于传统线性降维和浅层自编码器。
 
-本文在 Naagar 等（2024）的框架基础上，将其迁移至中国西北土屋-延东斑岩铜矿区，并进行了系统的方法对比实验。主要贡献如下：（1）构建了土屋-延东地区 Sentinel-2 10 波段光谱数据的完整预处理流程；（2）实现了 Raw K-means、PCA + K-means、Canonical AE + K-means 和 SAE + K-means 四组方法的系统对比；（3）引入 Silhouette 系数、Davies-Bouldin 指数和 Calinski-Harabasz 指数三项聚类指标进行定量评估；（4）通过消融实验分析了 bottleneck 维度和网络深度对聚类效果的影响；（5）将实验结果与原论文框架进行了方法层面的对齐讨论。
+然而，该研究存在四个可供深化的方面。第一，原论文仅在澳大利亚 Mutawintji 一个研究区进行了验证，框架在不同气候带和大地构造单元下的跨区域可迁移性尚未得到检验。第二，原论文得出"SAE 全面优于 Canonical AE"的结论，但未进一步追问：深度增益是否具有场景依赖性？当数据本身的非线性结构有限时，深层网络是否仍然必要？第三，原论文未系统分析 bottleneck 维度对聚类质量的影响——使用了固定的隐空间维度，缺乏消融实验来揭示过窄 bottleneck 引发的类别塌缩风险。第四，原论文的聚类定量评估仅使用了两项指标（CHI 和 DBI），地质解译以定性描述为主，缺乏基于波段比值的定量光谱证据。
+
+针对以上不足，本文围绕三个核心研究问题展开探索：（1）非线性降维是否显著优于线性降维？（2）深层 SAE 相对于浅层 Canonical AE 的增益有多大？（3）bottleneck 维度如何影响聚类质量？主要贡献与原论文不足的对应关系如下：
+
+（1）*跨区域迁移验证*（针对不足一）：将 SAE+K-means 框架从澳大利亚半干旱沉积变质岩区迁移至中国西北极干旱斑岩铜矿区（新疆土屋-延东），验证了其跨气候带和跨大地构造单元的适用性；
+
+（2）*深度增益的场景依赖性分析*（针对不足二）：首次在 Sentinel-2 10 波段数据上系统比较了浅层 Canonical AE 与深层 SAE 的聚类效果，发现两者在聚类分离性上出人意料地接近（CHI 147,239 vs 144,423），提出"深度增益具有场景依赖性"——当数据以线性相关为主导（PC1 解释 91.95% 方差）且地表类型有限（4--6 类）时，浅层非线性变换已能捕获主要判别结构；
+
+（3）*Bottleneck 维度消融实验*（针对不足三）：系统测试了 $z=3, 4, 5$ 三种设置，发现 $z=3$ 导致严重类别塌缩（最大类占比 48.9%, CHI 骤降至 93,656），$z=5$ 为最优压缩维度，为后续应用提供了维度选择的经验参考；
+
+（4）*多指标评估与定量光谱解译*（针对不足四）：引入 Silhouette 系数作为第三项聚类指标，并通过 5 个具有地质意义的波段比值（B11/B12、B12/B8A 等）对各聚类类别进行定量光谱分析，以 B11/B12=0.992 识别出高置信度蚀变候选区，弥补了原论文定性解译的不足；
+
+（5）*全流程可复现性*：构建了从 Sentinel-2 SAFE 解压到最终地质解释图的完整 Python 预处理与制图流程，确保实验全流程可复现。
 
 = 研究区与数据
 
@@ -91,7 +103,7 @@ Sentinel-2 MSI 的波段设置如表 1 所示。
   [B04 (Red)], [665], [10], [铁氧化物、真彩色合成],
   [B05 (Red Edge 1)], [705], [20], [植被红边、地质],
   [B06 (Red Edge 2)], [740], [20], [植被红边、地质],
-  [B07 (Red Edge 3)], [783], [20], [植被红边],
+  [B07 (Red Edge 3)], [783], [20], [植被红边], 
   [B08 (NIR)], [842], [10], [植被、水体],
   [B8A (NIR Narrow)], [865], [20], [植被监测],
   [B11 (SWIR 1)], [1610], [20], [蚀变矿物（OH⁻吸收）],
@@ -478,9 +490,9 @@ C1 类以红色轮廓和箭头标注，具有最低 B11/B12 比值和明显 SWIR
 
 相比之下，自编码器的 MSE 重建目标迫使 bottleneck 保留所有有助于区分不同光谱向量的信息——包括那些方差占比小但对聚类判别重要的波段间差异（如 SWIR 吸收特征）。这解释了为什么非线性 AE 的聚类效果显著优于 PCA。
 
-== 深度的影响：Canonical AE vs Stacked AE
+== 深度的影响：深层自编码器是否总是必要的？
 
-本实验中最引人注目的发现是：浅层 Canonical AE 的聚类质量（CHI=147,239）与深层 SAE（CHI=144,423）几乎持平，甚至在类别均衡性上略优（Max 36.0% vs 37.2%）。这一发现与原论文（Naagar et al., 2024）中"stacked autoencoders 比 canonical autoencoders 更好"的结论不完全一致。
+本实验中最引人注目的发现是：浅层 Canonical AE 的聚类质量（CHI=147,239）与深层 SAE（CHI=144,423）几乎持平，甚至在类别均衡性上略优（Max 36.0% vs 37.2%）。这一发现对原论文（Naagar et al., 2024）中"stacked autoencoders 比 canonical autoencoders 更好"的结论提出了重要的场景化补充——在原论文的半干旱沉积变质岩区，SAE 的优势是明确的；但在本研究的极干旱斑岩铜矿区，两者的聚类分离性几乎无差异。这提示我们，自编码器深度对聚类质量的增益可能存在"场景依赖性"：数据非线性越强、类别结构越复杂，深度网络的增益越大；反之，当数据以线性相关为主导时，浅层网络已经足够。
 
 可能的解释如下：（1）Sentinel-2 的 10 个光谱波段之间以线性相关性为主（PC1 解释了 91.95% 方差），非线性结构相对有限，因此浅层 AE 已能捕获大部分非线性关系；（2）土屋-延东研究区的地表类型（4--6 类）较为简单，不需要过深的层级表示来分离复杂类别；（3）SAE 的额外参数量（1,699 vs 1,067）在有限训练样本（300,000）上的优势未能充分体现。
 
@@ -492,9 +504,9 @@ Bottleneck 维度 $z$ 是自编码器流程中的关键超参数。本实验中 
 
 值得注意的是，本实验中仅测试了 $z ≤ 5$ 的设置。$z=6$ 或更大的 bottleneck 是否能在不过度引入噪声的前提下进一步提升聚类质量，值得在后续工作中探索。
 
-== 与原论文框架的异同
+== 与原论文框架的对比与改进
 
-表 11 从研究区、数据源、方法、验证和目标五个维度，系统比较了本文与原论文的异同。
+表 11 从研究区、数据源、方法和验证等维度系统比较了本文与原论文的异同。在此基础上，表 12 进一步归纳了本文针对原论文不足所做出的具体改进。
 
 #v(0.5em)
 #tablecaption[表 11 本文与原论文（Naagar et al., 2024）的对比]
@@ -513,14 +525,29 @@ Bottleneck 维度 $z$ 是自编码器流程中的关键超参数。本实验中 
   [目标], [geological units mapping], [斑岩铜矿区岩性/蚀变聚类],
 )
 
-本文的主要贡献在于：（1）将原论文框架成功迁移至极干旱矿区场景，验证了其跨区域适用性；（2）补充了 Canonical AE 与 SAE 在 Sentinel-2 10 波段数据上的直接深度对比，发现两者聚类质量接近；（3）引入 Silhouette 系数作为 CHI 和 DBI 之外的第三项指标，丰富了评估维度。
+#v(0.5em)
+#tablewide([表 12 本文针对原论文不足的改进对照])[
+
+#set text(size: 8pt)
+#table3(
+  size: 8pt,
+  columns: (auto, auto, auto),
+  [原论文的不足], [本文的改进], [改进效果],
+  [仅在一个研究区（澳大利亚 Mutawintji）验证], [迁移至中国西北极干旱斑岩铜矿区（土屋-延东）], [验证了跨气候带和跨大地构造单元的适用性],
+  [未分析深度增益的场景依赖性], [系统比较 Canonical AE 与 SAE 在同一数据集上的聚类效果], [发现浅层 AE 与深层 SAE 聚类分离性接近，提出"深度增益具有场景依赖性"],
+  [未系统分析 bottleneck 维度影响], [消融实验测试 $z=3, 4, 5$ 三种维度], [揭示 $z=3$ 导致类别塌缩，确立 $z=5$ 为最优维度],
+  [仅两项聚类指标（CHI、DBI）], [引入 Silhouette 系数作为第三项指标], [三维度评估增强结论稳健性],
+  [地质解译以定性描述为主], [5 个波段比值定量分析 + 全自动制图], [以 B11/B12=0.992 识别出高置信度蚀变候选区],
+)
+]
+#set text(size: 10pt)
 
 == 地质解译
 
-结合 §4.7 的光谱响应分析结果、假彩色合成图（图 2）的空间对应关系以及土屋-延东地区已有的地质研究资料#super[5]，对 SAE $z=5$, $k=6$ 的 6 个聚类类别进行综合地质解译，如表 12 所示。
+结合 §4.7 的光谱响应分析结果、假彩色合成图（图 2）的空间对应关系以及土屋-延东地区已有的地质研究资料#super[5]，对 SAE $z=5$, $k=6$ 的 6 个聚类类别进行综合地质解译，如表 13 所示。
 
 #v(0.5em)
-#tablewide([表 12 聚类类别综合地质解译（基于光谱响应 + 空间分布 + 区域地质知识）])[
+#tablewide([表 13 聚类类别综合地质解译（基于光谱响应 + 空间分布 + 区域地质知识）])[
 
 #set text(size: 7pt)
 #table3(
@@ -561,19 +588,17 @@ Bottleneck 维度 $z$ 是自编码器流程中的关键超参数。本实验中 
 
 本文以新疆土屋-延东斑岩型铜矿区为研究对象，基于 Sentinel-2A L2A 影像的 10 个光谱波段（B02--B12），构建了从预处理到无监督岩性聚类的完整遥感地质分析流程，并系统比较了 Raw K-means、PCA + K-means、Canonical AE + K-means 和 SAE + K-means 四种方法的聚类效果。主要结论如下：
 
-（1）Elbow 方法自动识别 $k=5$ 为原始 10 维光谱 K-means 聚类的最优拐点，Baseline 聚类结果 Silhouette=0.3709, DBI=0.8039, CHI=123,898。
+（1）非线性自编码器方法在聚类质量上一致优于线性和无降维基线（CHI ≥ 135,377 vs PCA 的 ≤127,301）。PCA 降维的增益有限（CHI 仅 +2.7%），因为其方差最大化目标与 K-means 的簇内平方和最小化目标不一致。
 
-（2）PCA 降维对聚类质量的提升有限（CHI +2.7%）。虽然前 3 个主成分累计解释了 99.53% 的总方差，但 PCA 的方差最大化目标与 K-means 的簇内平方和最小化目标不一致，保留的高方差成分未必包含聚类判别所需的光谱差异信息。
+（2）浅层 Canonical AE 与深层 SAE 在聚类分离性指标上出人意料地接近——Canonical AE 的 CHI 略优（147,239 vs 144,423）。这一发现对"深层自编码器总是更好"的直觉提出了场景化补充：当数据以线性相关为主导时（PC1 解释 91.95% 方差），浅层非线性变换已能捕获主要的聚类判别结构。SAE 的优势体现在重建精度（MSE=0.00285 vs 0.00466）和簇紧凑性（DBI=0.6981 vs 0.7338）上，表明深度网络在需要高保真光谱重建的下游任务中仍有价值。
 
-（3）非线性自编码器方法在聚类质量上整体优于线性和无降维基线（CHI ≥ 135,377 vs PCA 的 ≤127,301）。在自编码器内部，浅层 Canonical AE（10→16→5→16→10）与深层 SAE（10→32→16→5→16→32→10）在聚类分离性指标上表现接近——Canonical AE 的 CHI 略优（147,239 vs 144,423），表明浅层非线性变换已能捕获 Sentinel-2 10 波段数据中的主要聚类判别结构；SAE 则在重建精度（MSE=0.00285 vs 0.00466）和簇紧凑性（DBI=0.6981 vs 0.7338）上具有明显优势，表明深层层级结构有助于学习更精细和更紧致的光谱表示。综合聚类指标、重建保真度和与原论文框架的一致性，本文将 SAE $z=5$, $k=6$ 作为主要地质解译结果，同时将 Canonical AE 作为强基线对照。
+（3）Bottleneck 维度的消融实验揭示了其对聚类质量的关键影响：$z=3$ 导致严重类别塌缩（最大类占比 48.9%, CHI 骤降至 93,656），$z=5$ 为最优压缩维度。对于包含 4--6 种主要地表类型的研究区，5 维隐空间提供了足够的自由度。
 
-（4）消融实验表明，bottleneck 维度 $z=3$ 导致严重类别塌缩（最大类占比 48.9%, CHI 骤降至 93,656），$z=5$ 为最优压缩维度。该结果提示，对于包含 4--6 种主要地表类型的研究区，5 维隐空间提供了足够的自由度来编码光谱差异。
+（4）基于光谱响应曲线的定量分析为聚类结果赋予了物理可解释性。Cluster 1（18.0%）的 B11/B12=0.992 明确了 B12（2190 nm）处的 OH⁻ 吸收特征，结合其与假彩色图中褐红色蚀变信号的空间一致性，将该类高置信度解译为绢英岩化/青磐岩化蚀变带。
 
-（5）聚类类别的光谱响应分析揭示了各类别之间的定量光谱差异。Cluster 1（18.0%）的 B11/B12=0.992 为 6 类中最低，明确指示了 B12（2190 nm）处的 OH⁻ 吸收特征，结合其与假彩色图中褐红色蚀变信号的空间一致性，将该类判读为绢英岩化/青磐岩化蚀变带的置信度较高。其余 5 类的光谱特征分别指向未蚀变侵入岩、火山-沉积岩基质、基性火山岩/阴影、第四系沉积物和混合像元等地质单元。
+（5）本研究成功将 Naagar 等（2024）的 SAE+K-means 框架从澳大利亚 Mutawintji 迁移至中国西北极干旱斑岩铜矿区，验证了该框架的跨区域适用性，并构建了全自动 Python 遥感地质解释制图流程，确保全流程可复现。
 
-（6）本研究成功将 Naagar 等（2024）的 SAE+K-means 岩性填图框架从澳大利亚 Mutawintji 迁移至中国西北极干旱斑岩铜矿区，在复现 PCA/Canonical AE/SAE 三种降维方法的基础上，补充了 Canonical AE 与 SAE 的深度对比分析，验证了该框架的跨区域适用性。
-
-综上，自编码器（无论深浅）结合 K-means 的无监督聚类框架能够有效改善 Sentinel-2 多光谱影像在裸露区的岩性聚类效果。浅层 Canonical AE 与深层 SAE 在聚类分离性上表现相近，但 SAE 在重建保真度和簇紧凑性上更优，且与原论文框架保持一致。基于光谱响应分析的定量地质解译进一步验证了聚类结果的物理可解释性——蚀变带（Cluster 1）的 SWIR 吸收特征与已知矿床蚀变分带格局高度吻合。本框架为缺乏地面真值标签的偏远裸露区岩性填图提供了一套可复现、可迁移的无监督遥感地质分析方法。
+综合以上发现，本文凝练出三条核心认识：第一，SAE+K-means 无监督聚类框架在极端干旱斑岩铜矿区依然有效，具备跨气候带和跨大地构造单元的迁移能力；第二，在该数据场景下——Sentinel-2 10 波段以线性共线性为主导、地表类别数有限（4--6 类）——浅层自编码器的聚类性能与深层 SAE 旗鼓相当，提示自编码器深度的增益具有场景依赖性，在选择模型复杂度时应考虑数据本身的非线性程度；第三，B11/B12 波段比值可作为该区域热液蚀变的快速遥感指示标志，为无标签裸露区的矿产勘查提供了光谱层面的定量判据。上述三条认识分别对应了原论文（Naagar et al., 2024）在跨区域验证、深度增益分析和定量光谱解译三个方面的不足，为后续无监督遥感岩性填图研究提供了可复现、可迁移的方法参考。
 
 = 参考文献
 

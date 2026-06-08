@@ -41,6 +41,7 @@ venv/
 Thumbs.db
 .vscode/
 !slide/.vscode/
+.claude/
 
 # ===== Build outputs =====
 report/*.pdf
