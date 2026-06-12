@@ -5,12 +5,14 @@
 \PassOptionsToPackage{dvipsnames}{xcolor}
 \documentclass[10pt,aspectratio=169]{beamer}
 \usepackage{zju_beamer}
+\usepackage{array}
 \graphicspath{{./figures/}}
 \zjusectioncolor{blue}
 
 % Lightweight helpers for compact academic slides.
 \newcommand{\metric}[1]{\textcolor{MidnightBlue}{\textbf{#1}}}
 \newcommand{\method}[1]{\textbf{#1}}
+\newcommand{\claim}[1]{\textcolor{MidnightBlue}{\textbf{#1}}}
 \newcommand{\imgfit}[2][0.95\linewidth]{%
   \IfFileExists{#2}{%
     \includegraphics[width=#1,height=0.65\textheight,keepaspectratio]{#2}%
@@ -22,8 +24,8 @@
 }
 
 % 首页信息设置
-\title[Sentinel-2 岩性聚类]{基于自编码器与 K-means 的\\Sentinel-2 多光谱遥感影像岩性聚类研究}
-\subtitle{《遥感地学分析》课程大作业展示}
+\title[Sentinel-2 岩性聚类]{Sentinel-2 无监督岩性聚类与\\Geo-DEC 空间增强}
+\subtitle{自编码器基线比较、空间连续性评价与谨慎地质解译}
 \author[张项翌杰]{张项翌杰}
 \institute[ZJU]{浙江大学}
 \date{2026}
@@ -39,33 +41,48 @@
   \tableofcontents
 \end{frame}
 
-\section{研究背景}
+\section{问题与数据}
 
-\begin{frame}{研究动机}
+\begin{frame}{本文不是简单复现 SAE，而是检验其迁移边界}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.52\linewidth}
-      \begin{block}{问题背景}
-        \begin{itemize}
-          \item 干旱裸露矿区植被覆盖低，适合利用多光谱影像识别岩性与蚀变信息。
-          \item 遥感地质填图常缺少可靠地面标签，监督分类难以直接展开。
-          \item 无监督聚类可从光谱数据中发现自然分组，形成初步地质解译线索。
-        \end{itemize}
+    \begin{column}{0.48\linewidth}
+      \begin{block}{原论文给出的起点}
+        \small
+        Naagar 等提出 PCA / Canonical AE / SAE + K-means 的无监督岩性填图框架，说明深层自编码器可学习低维光谱表示 \cite{naagar2024remote}。
+      \end{block}
+      \begin{block}{本项目追问的问题}
+        \small
+        在极干旱斑岩铜矿区，深层 SAE 是否仍明显优于浅层 AE？像元独立聚类能否得到连续的地质图斑？
       \end{block}
     \end{column}
-    \begin{column}{0.43\linewidth}
-      \begin{block}{核心问题}
-        \small
-        线性降维是否足够？\\[0.4em]
-        自编码器是否能学习更适合聚类的低维光谱表示？\\[0.4em]
-        聚类类别能否获得可解释的地质含义？
-      \end{block}
+    \begin{column}{0.48\linewidth}
+      \small
+      \begin{table}
+        \centering
+        \resizebox{\linewidth}{!}{%
+          \begin{tabular}{>{\raggedright\arraybackslash}p{0.36\linewidth}
+                          >{\raggedright\arraybackslash}p{0.56\linewidth}}
+            \hline
+            原论文不足 & 本文对应设计 \\
+            \hline
+            单一研究区验证 & 迁移到新疆土屋--延东斑岩铜矿区 \\
+            深度增益未讨论 & 比较 Canonical AE 与 SAE 的真实差距 \\
+            Bottleneck 固定 & 测试 $z=3,4,5$，观察类别塌缩 \\
+            空间信息偏后处理 & 增加 Geo-DEC 空间上下文增强 \\
+            地质解释偏定性 & 用波段比值修正 C1 判读置信度 \\
+            \hline
+          \end{tabular}}
+      \end{table}
+      \vspace{0.25em}
+      \claim{核心主线：}光谱表示学习回答“能不能分”，Geo-DEC 回答“图斑能不能更连续”。
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{研究区与数据}
+\begin{frame}{土屋--延东具备多光谱岩性识别的场景条件}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.33\linewidth}
+    \begin{column}{0.34\linewidth}
+      \small
       \begin{itemize}
         \item 研究区：新疆哈密土屋--延东斑岩型铜矿区。
         \item 数据源：Sentinel-2A MSI Level-2A 地表反射率。
@@ -73,298 +90,292 @@
         \item AOI：94.30$^\circ$E--94.70$^\circ$E，42.02$^\circ$N--42.32$^\circ$N。
         \item 使用 B02--B12 中 10 个可见光、近红外和短波红外波段。
       \end{itemize}
+      \vspace{0.6em}
+      \begin{center}
+        \Large \metric{2,772,025}\\[-0.1em]
+        \scriptsize 有效像元，统一到 20 m 分辨率
+      \end{center}
     \end{column}
     \begin{column}{0.62\linewidth}
       \centering
       \imgfit[\linewidth]{../data/processed/preview_geology_B12_B8A_B02.png}
-      \vspace{0.3em}
+      \vspace{0.2em}
 
-      \scriptsize Sentinel-2 B12/B8A/B02 地质假彩色合成
+      \scriptsize Sentinel-2 B12/B8A/B02 地质假彩色合成；褐红色调代表 SWIR 亮度/对比度线索，不等同于吸收证据。
     \end{column}
   \end{columns}
 \end{frame}
 
-\section{数据与方法}
+\section{方法设计}
 
-\begin{frame}{预处理流程}
-  \begin{block}{从 SAFE 产品到聚类输入}
-    \begin{enumerate}
-      \item 解压 Sentinel-2 L2A SAFE 产品，提取 10 个光谱波段与 SCL 波段。
-      \item 将所有波段统一重采样到 20 m 空间分辨率。
-      \item 按 AOI 裁剪研究区，使用 SCL 去除云、阴影、水体和无效像元。
-      \item 对有效像元进行光谱标准化，得到 10 维特征矩阵。
-    \end{enumerate}
-  \end{block}
-  \begin{center}
-    \Large
-    最终数据集：\metric{2,772,025} 个有效像元 $\times$ \metric{10} 个光谱波段
-  \end{center}
+\begin{frame}{两阶段流程把“光谱分离”和“空间连续”分开回答}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\linewidth}
+      \centering
+      \imgfit[\linewidth]{../report/assets/image.png}
+    \end{column}
+    \begin{column}{0.38\linewidth}
+      \small
+      \begin{block}{Stage 1：基线链条}
+        Raw K-means $\rightarrow$ PCA + K-means $\rightarrow$ Canonical AE + K-means $\rightarrow$ SAE + K-means。
+      \end{block}
+      \begin{block}{Stage 2：空间增强}
+        Geo-DEC 在 AE 思路上加入地质波段比值、3$\times$3 邻域统计和 DEC 聚类损失。
+      \end{block}
+      \vspace{0.4em}
+      \claim{设计原则：}Geo-DEC 不作为“同级最优模型竞赛者”，而是检验空间上下文是否提升制图可读性。
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{四组对比方法}
+\begin{frame}{五类方法承担不同实验角色}
   \small
   \begin{table}
     \centering
     \resizebox{\linewidth}{!}{%
-      \begin{tabular}{llll}
+      \begin{tabular}{>{\raggedright\arraybackslash}p{0.19\linewidth}
+                      >{\raggedright\arraybackslash}p{0.20\linewidth}
+                      >{\raggedright\arraybackslash}p{0.23\linewidth}
+                      >{\raggedright\arraybackslash}p{0.28\linewidth}}
         \hline
-        方法 & 特征类型 & 维度 & 作用 \\
+        方法 & 特征/结构 & 主要配置 & 回答的问题 \\
         \hline
-        Raw K-means & 原始标准化光谱 & 10 & 无降维基线 \\
-        PCA + K-means & 线性主成分 & 3 / 5 & 检验线性降维是否足够 \\
-        Canonical AE + K-means & 浅层非线性隐特征 & 5 & 非线性强基线 \\
-        Stacked AE + K-means & 深层非线性隐特征 & 3 / 4 / 5 & 主体方法，对齐 Naagar 等框架 \\
+        Raw K-means & 原始 10 波段光谱 & $k=5$ & 不降维时的基础聚类质量 \\
+        PCA + K-means & 线性主成分 & $z=3/5$ & 线性降维是否足够 \\
+        Canonical AE & 浅层非线性表示 & $10\rightarrow16\rightarrow5\rightarrow16\rightarrow10$ & 浅层非线性是否已能捕获判别结构 \\
+        SAE & 深层非线性表示 & $10\rightarrow32\rightarrow16\rightarrow z\rightarrow16\rightarrow32\rightarrow10$ & 增加深度是否带来额外收益 \\
+        Geo-DEC & 地质指数 + 空间上下文 + DEC & $28\rightarrow64\rightarrow32\rightarrow5$ & 空间连续性是否改善 \\
         \hline
       \end{tabular}}
   \end{table}
-  \vspace{0.7em}
-  \begin{block}{实验逻辑}
-    \centering
-    Raw 基线 $\rightarrow$ PCA 线性降维 $\rightarrow$ 浅层 AE 非线性表示 $\rightarrow$ 深层 SAE 层级表示
-  \end{block}
-\end{frame}
-
-\begin{frame}{自编码器模型结构}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\linewidth}
-      \begin{block}{Canonical AE}
-        \centering
-        \Large
-        $10 \rightarrow 16 \rightarrow 5 \rightarrow 16 \rightarrow 10$
-      \end{block}
-      \small
-      浅层非线性变换，用于检验是否只需较简单的 encoder--decoder 即可捕获主要聚类判别结构。
-    \end{column}
-    \begin{column}{0.48\linewidth}
-      \begin{block}{Stacked AE}
-        \centering
-        \Large
-        $10 \rightarrow 32 \rightarrow 16 \rightarrow z \rightarrow 16 \rightarrow 32 \rightarrow 10$
-      \end{block}
-      \small
-      逐层压缩光谱信息，实验 $z=3,4,5$，用于分析 bottleneck 维度与网络深度的影响。
-    \end{column}
-  \end{columns}
-  \vspace{1em}
-  \begin{equation*}
-    \mathcal{L}_{\mathrm{MSE}}=\frac{1}{N}\sum_{i=1}^{N}\|x_i-\hat{x}_i\|^2
-  \end{equation*}
-\end{frame}
-
-\begin{frame}{评价指标}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.32\linewidth}
-      \begin{block}{Silhouette $\uparrow$}
-        \small
-        衡量簇内紧凑性与簇间分离性，越接近 1 越好。
-      \end{block}
-    \end{column}
-    \begin{column}{0.32\linewidth}
-      \begin{block}{DBI $\downarrow$}
-        \small
-        衡量簇之间的平均相似度，越低表示簇间分离更清晰。
-      \end{block}
-    \end{column}
-    \begin{column}{0.32\linewidth}
-      \begin{block}{CHI $\uparrow$}
-        \small
-        衡量簇间离散度与簇内离散度之比，越高表示聚类结构更优。
-      \end{block}
-    \end{column}
-  \end{columns}
-  \vspace{1em}
+  \vspace{0.45em}
   \begin{center}
-    全量样本规模较大，三项指标在固定随机种子下抽样 \metric{100,000} 个有效像元计算。
+    \claim{评价维度：}Silhouette、DBI、CHI 衡量聚类分离性；local agreement 与 isolated pixel ratio 衡量空间连续性。
   \end{center}
 \end{frame}
 
 \section{实验结果}
 
-\begin{frame}{Baseline 与 PCA：线性降维提升有限}
+\begin{frame}{PCA 捕获了总方差，却没有显著改善聚类}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.33\linewidth}
+    \begin{column}{0.34\linewidth}
+      \small
       \begin{itemize}
-        \item Raw K-means 通过 Elbow 方法自动选择 \metric{$k=5$}。
-        \item Baseline：Silhouette=0.3709，DBI=0.8039，CHI=123,898。
-        \item PCA 前 3 个主成分累计解释 \metric{99.53\%} 方差。
-        \item 但 PCA $z=3$ 的 CHI 仅提升到 127,301，增益约 \metric{+2.7\%}。
+        \item PC1 解释 \metric{91.95\%} 方差，前 3 个主成分累计解释 \metric{99.53\%}。
+        \item 这说明 Sentinel-2 10 波段主要受整体亮度/反照率共同变化控制。
+        \item 但 Raw K-means 到 PCA $z=3$ 的 CHI 仅从 123,897 提升到 127,301，约 \metric{+2.7\%}。
       \end{itemize}
+      \vspace{0.4em}
+      \begin{block}{结论}
+        \scriptsize
+        最大方差方向不等于最有利的聚类判别方向；SWIR 波段比值等低方差信息仍然重要。
+      \end{block}
     \end{column}
     \begin{column}{0.62\linewidth}
       \centering
       \imgfit[\linewidth]{../results/cluster_pca/pca_explained_variance.png}
-      \vspace{0.3em}
+      \vspace{0.2em}
 
       \scriptsize PCA 方差解释分析
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{自编码器训练：SAE 重建更精确}
+\begin{frame}{深层 SAE 没有显著拉开聚类分离性}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.36\linewidth}
+    \begin{column}{0.42\linewidth}
       \small
       \begin{table}
         \centering
-        \begin{tabular}{lcc}
-          \hline
-          方法 & 参数量 & 最终 MSE \\
-          \hline
-          Canonical AE $z=5$ & 1,067 & 0.00466 \\
-          SAE $z=5$ & 1,699 & \metric{0.00285} \\
-          \hline
-        \end{tabular}
+        \resizebox{\linewidth}{!}{%
+          \begin{tabular}{lccc}
+            \hline
+            方法 & CHI $\uparrow$ & DBI $\downarrow$ & Recon. MSE $\downarrow$ \\
+            \hline
+            Canonical AE $z=5$ & \metric{147,239} & 0.7338 & 0.00466 \\
+            SAE $z=5$ & 144,423 & \metric{0.6981} & \metric{0.00285} \\
+            \hline
+          \end{tabular}}
       \end{table}
       \vspace{0.4em}
       \begin{itemize}
-        \item SAE 在早期训练阶段即取得更低重建损失。
-        \item 更深层级结构保留了更精细的波段间关系。
-        \item 但更低 MSE 不必然意味着所有聚类指标都全面领先。
+        \item 浅层 AE 的聚类分离性与 SAE 几乎持平，CHI 还略高。
+        \item SAE 的优势更多体现在重建精度和簇紧凑性。
+        \item 这补充了原论文结论：\claim{深度增益具有场景依赖性}。
       \end{itemize}
     \end{column}
-    \begin{column}{0.59\linewidth}
+    \begin{column}{0.54\linewidth}
       \centering
       \imgfit[\linewidth]{../results/cluster_sae/sae_training_loss_z5.png}
-      \vspace{0.3em}
+      \vspace{0.2em}
 
-      \scriptsize SAE $z=5$ 训练损失曲线
+      \scriptsize SAE $z=5$ 训练损失曲线；低重建误差不必然转化为全面领先的聚类指标。
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{综合聚类指标对比}
+\begin{frame}{过窄 bottleneck 会把不同地表类型压成同一类}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k5_z3.png}
+      \scriptsize $z=3,k=5$：最大类 \metric{48.9\%}，CHI=93,656
+    \end{column}
+    \begin{column}{0.31\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z4.png}
+      \scriptsize $z=4,k=6$：Silhouette/DBI 较好，但最大类仍达 42.0\%
+    \end{column}
+    \begin{column}{0.31\linewidth}
+      \centering
+      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z5.png}
+      \scriptsize \metric{$z=5,k=6$}：类别均衡性、CHI 与重建误差之间更稳妥
+    \end{column}
+  \end{columns}
+  \vspace{0.6em}
+  \begin{center}
+    \small
+    $z=5$ 不是所有指标绝对最优，而是避免类别塌缩并保留光谱细节的主实验折中配置。
+  \end{center}
+\end{frame}
+
+\begin{frame}{综合指标显示：AE/SAE 强在分离，Geo-DEC 强在连续}
   \scriptsize
   \begin{table}
     \centering
     \resizebox{\linewidth}{!}{%
       \begin{tabular}{lcccccc}
         \hline
-        Method & Dim. & $k$ & Silhouette $\uparrow$ & DBI $\downarrow$ & CHI $\uparrow$ & Recon. MSE \\
+        Method & Dim. & $k$ & Silhouette $\uparrow$ & DBI $\downarrow$ & CHI $\uparrow$ & Agreement / Isolated \\
         \hline
-        Raw K-means & 10 & 5 & 0.3709 & 0.8039 & 123,898 & -- \\
-        PCA + K-means & 3 & 5 & 0.3796 & 0.7885 & 127,301 & -- \\
-        PCA + K-means & 5 & 6 & 0.3322 & 0.8864 & 112,440 & -- \\
-        Canonical AE + K-means & 5 & 6 & \metric{0.4166} & 0.7338 & \metric{147,239} & 0.00466 \\
-        SAE + K-means & 5 & 6 & 0.4165 & \metric{0.6981} & 144,423 & \metric{0.00285} \\
+        Raw K-means & 10 & 5 & 0.3709 & 0.8039 & 123,897 & 0.9029 / 0.0074 \\
+        PCA + K-means & 3 & 5 & 0.3796 & 0.7866 & 127,301 & 0.9036 / 0.0073 \\
+        SAE + K-means & 3 & 5 & 0.3735 & 0.8046 & 93,656 & 0.9204 / 0.0058 \\
+        SAE + K-means & 4 & 6 & \metric{0.4577} & \metric{0.6706} & 135,377 & 0.8928 / 0.0093 \\
+        SAE + K-means & 5 & 6 & 0.4165 & 0.6981 & 144,423 & 0.8891 / 0.0095 \\
+        Canonical AE + K-means & 5 & 6 & 0.4166 & 0.7338 & \metric{147,239} & 0.8834 / 0.0099 \\
+        Geo-DEC & 5 & 6 & 0.4157 & 0.8877 & 68,821 & \metric{0.9348 / 0.0057} \\
         \hline
       \end{tabular}}
   \end{table}
   \vspace{0.5em}
   \begin{itemize}
-    \item 非线性自编码器特征整体优于 Raw 和 PCA 基线。
-    \item Canonical AE 的 CHI 略高，说明浅层非线性已能捕获主要判别结构。
-    \item SAE 的 DBI 与重建误差更优，因此作为最终地质解释主结果。
+    \item AE/SAE 主配置显著优于 Raw 与 PCA，说明非线性表示学习有效。
+    \item Geo-DEC 的 CHI/DBI 未超过 AE/SAE，但 local agreement 最高、isolated pixel ratio 最低。
+    \item 指标应按目标解读：分离性与空间连续性之间存在 trade-off。
   \end{itemize}
 \end{frame}
 
-\begin{frame}{四种方法空间结果对比}
+\begin{frame}{Geo-DEC 是空间制图增强，而不是替代 AE/SAE}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.78\linewidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.80\textheight,keepaspectratio]{../results/final_figures/method_comparison_2x2.png}
+    \begin{column}{0.50\linewidth}
+      \begin{block}{Geo-DEC 增加了什么？}
+        \small
+        \begin{itemize}
+          \item 输入从 10 维光谱扩展到 28 维特征。
+          \item 增加 B11/B12、B12/B8A、B04/B02、NDVI 等地质相关比值。
+          \item 计算 3$\times$3 邻域均值和标准差，引入局部空间上下文。
+          \item 用 DEC 软分配和 KL 散度微调聚类中心。
+        \end{itemize}
+      \end{block}
     \end{column}
-    \begin{column}{0.18\linewidth}
-      \small
-      \begin{itemize}
-        \item Raw 结果存在较明显空间破碎。
-        \item PCA 对整体空间格局改善有限。
-        \item AE 与 SAE 产生更紧凑的低维光谱表示。
-        \item SAE 在空间连续性与细粒度类别保留之间较均衡。
-      \end{itemize}
+    \begin{column}{0.46\linewidth}
+      \begin{block}{实验说明了什么？}
+        \small
+        \begin{itemize}
+          \item 空间上下文减少了椒盐噪声，图斑更连续。
+          \item 但局部平滑可能稀释细微光谱判别差异。
+          \item 因此 Geo-DEC 更适合定位为\claim{制图增强补充}，而非传统聚类指标最优模型。
+        \end{itemize}
+      \end{block}
+      \vspace{0.35em}
+      \begin{block}{空间连续性指标}
+        \centering
+        \begin{tabular}{>{\centering\arraybackslash}p{0.42\linewidth}
+                        >{\centering\arraybackslash}p{0.42\linewidth}}
+          {\Large \metric{0.9348}} & {\Large \metric{0.0057}} \\
+          \scriptsize local agreement $\uparrow$ & \scriptsize isolated pixel ratio $\downarrow$ \\
+          \scriptsize 全部方法最高 & \scriptsize 全部方法最低 \\
+        \end{tabular}
+      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{SAE 消融：Bottleneck 维度影响聚类稳定性}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.32\linewidth}
-      \centering
-      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k5_z3.png}
-      \scriptsize $z=3,k=5$：最大类 48.9\%，类别塌缩
-    \end{column}
-    \begin{column}{0.32\linewidth}
-      \centering
-      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z4.png}
-      \scriptsize $z=4,k=6$：类别结构恢复
-    \end{column}
-    \begin{column}{0.32\linewidth}
-      \centering
-      \imgfit[0.98\linewidth]{../results/cluster_sae/sae_kmeans_k6_z5.png}
-      \scriptsize \metric{$z=5,k=6$}：最终解释配置
-    \end{column}
-  \end{columns}
-  \vspace{0.5em}
-  \begin{center}
-    过窄 bottleneck 会压缩掉关键光谱差异，$z=5$ 在压缩与可分性之间更稳健。
-  \end{center}
+\begin{frame}{空间结果显示 Geo-DEC 明显降低破碎感}
+  \centering
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{../results/final_figures/method_comparison_2x3_geo_dec.png}
+  \vspace{0.2em}
+
+  \scriptsize
+  Raw/PCA/AE/SAE 主要比较光谱表征能力；Geo-DEC 在右下地质假彩色参照下体现出更连续的图斑，但不代表传统分离指标最优。
 \end{frame}
 
 \section{地质解释}
 
-\begin{frame}{聚类类别的光谱响应}
+\begin{frame}{B11/B12 的方向修正把 C1 降级为候选线索}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.70\linewidth}
+    \begin{column}{0.66\linewidth}
       \centering
       \imgfit[\linewidth]{../results/cluster_spectra/cluster_spectral_profiles.png}
     \end{column}
-    \begin{column}{0.26\linewidth}
+    \begin{column}{0.30\linewidth}
       \small
-      \begin{block}{Cluster 1}
+      \begin{block}{C1 的证据}
         \begin{itemize}
-          \item B11/B12 = \metric{0.992}，为 6 类中最低。
-          \item B11 $\rightarrow$ B12 出现明显反射率下降。
-          \item B12 约 2190 nm，对 Al--OH、Mg--OH 蚀变矿物吸收敏感。
+          \item 占比 \metric{18.0\%}。
+          \item B11/B12=\metric{0.992}，为 6 类最低。
+          \item B12/B8A=\metric{1.282}，为 6 类最高。
+          \item 北部呈带状--块状，与部分假彩色褐红色区对应。
         \end{itemize}
       \end{block}
-      \small
-      因此 Cluster 1 可解释为高置信度热液蚀变候选类。
+      \vspace{0.25em}
+      \begin{block}{必须降置信}
+        \scriptsize
+        B11/B12 $<1$ 表示 B11 低于 B12，不能证明 B12 处发生吸收。因此 C1 只能作为光谱--空间候选线索，需地质图或野外验证。
+      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{最终遥感地质解释图}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.78\linewidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../results/final_figures/python_final_interpretation_map.png}
-    \end{column}
-    \begin{column}{0.18\linewidth}
-      \small
-      \begin{itemize}
-        \item 底图：B12/B8A/B02 地质假彩色影像。
-        \item 叠加层：SAE $z=5,k=6$ 聚类结果。
-        \item Cluster 1 以轮廓强调，作为蚀变候选区域。
-      \end{itemize}
-      \vspace{0.2em}
-      \begin{block}{注意}
-        \tiny
-        该图是基于无监督聚类的光谱推断，未经过野外验证，不应视为正式地质图。
-      \end{block}
-    \end{column}
-  \end{columns}
+\begin{frame}{最终解释图强调“候选线索”，不是正式地质图}
+  \centering
+  \includegraphics[width=0.94\linewidth,height=0.78\textheight,keepaspectratio]{../results/final_figures/python_final_interpretation_map.png}
+  \vspace{0.1em}
+
+  \scriptsize
+  底图为 B12/B8A/B02 假彩色，叠加 SAE $z=5,k=6$ 聚类；C1 仅标注为 candidate clue，图中明确提示 validation required。
+  该图未经地面真值或地质图定量校准，不能视为正式地质图。
 \end{frame}
 
 \section{结论}
 
-\begin{frame}{结论与展望}
+\begin{frame}{四条认识支撑后续无标签遥感地质制图}
   \small
   \begin{block}{主要结论}
     \begin{enumerate}
-      \item 构建了土屋--延东地区 Sentinel-2 10 波段预处理与无监督岩性聚类流程。
-      \item 非线性 AE 表示整体优于 Raw 与 PCA；SAE 在 DBI 和 MSE 上更优，适合作为最终解释主结果。
-      \item Cluster 1 呈现明确 SWIR 吸收特征，可作为热液蚀变候选类。
+      \item SAE+K-means 框架可迁移到极干旱斑岩铜矿区，非线性 AE 表示整体优于 Raw 与 PCA。
+      \item 深度增益具有场景依赖性：Canonical AE 与 SAE 聚类分离性接近，SAE 的优势主要在 MSE 和 DBI。
+      \item Bottleneck 维度会显著影响类别结构；$z=3$ 出现类别塌缩，$z=5$ 是本研究区更稳妥的折中。
+      \item Geo-DEC 证明空间上下文能提升图斑连续性，但不能替代 AE/SAE 作为传统分离指标强基线。
     \end{enumerate}
   \end{block}
-  \begin{block}{局限与后续工作}
+  \begin{block}{局限与展望}
     \scriptsize
-    局限：缺少地面真值验证；全连接 AE 未利用空间邻域；仅使用单时相影像；K-means 对非球形光谱簇适应性有限。后续可引入野外样点、卷积自编码器、多时相数据和更灵活的聚类模型。
+    当前解译缺少地面真值验证；Geo-DEC 尚未系统消融 DEC 权重、邻域窗口和增强特征组合；未来可引入 DEM 地形校正、ASTER 热红外信息、已发表地质图一致性评价，以及 CAE/GNN 等更强的光谱--空间模型。
   \end{block}
 \end{frame}
 
 \section{参考文献}
-\begin{frame}[allowframebreaks]
+\begin{frame}[t]
   \frametitle{参考文献}
-  \reference
+  \scriptsize
+  \setlength{\columnsep}{1.8em}
+  \begin{multicols}{2}
+    \nocite{*}
+    \bibliographystyle{unsrt}
+    \bibliography{references}
+  \end{multicols}
 \end{frame}
 
 \end{document}
