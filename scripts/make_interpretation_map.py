@@ -2,7 +2,7 @@
 
 底图：Sentinel-2 B12/B8A/B02 地质假彩色
 叠加：SAE z=5,k=6 聚类结果（半透明）
-标注：C1 alteration candidate 高亮 + 图例 + 比例尺 + 指北针
+标注：C1 candidate clue 高亮 + 图例 + 比例尺 + 指北针
 """
 from pathlib import Path
 
@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, Rectangle
 from matplotlib.lines import Line2D
 import matplotlib.ticker as mticker
+
+from plot_style import DPI_RASTER, apply_report_style
 
 ROOT = Path(__file__).parent.parent.resolve()
 STACK_PATH = ROOT / "data" / "processed" / "s2_tuwu_yandong_20240813_stack_20m_masked.tif"
@@ -24,7 +26,7 @@ BAND_NAMES = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B1
 # — 固定颜色映射（Cluster 0–5）—
 CLUSTER_COLORS = {
     0: "#1f77b4",  # blue
-    1: "#d62728",  # red — alteration candidate
+    1: "#E69F00",  # orange - candidate clue
     2: "#7f7f7f",  # gray
     3: "#9467bd",  # purple
     4: "#8c564b",  # brown
@@ -33,7 +35,7 @@ CLUSTER_COLORS = {
 
 CLUSTER_LABELS = {
     0: "C0: unaltered intrusive candidate",
-    1: "C1: alteration candidate\n    (SWIR absorption)",
+    1: "C1: spectral-spatial\n    candidate clue",
     2: "C2: volcanic-sedimentary\n    background",
     3: "C3: mixed / transition pixels",
     4: "C4: mafic rock or\n    terrain shadow",
@@ -41,6 +43,8 @@ CLUSTER_LABELS = {
 }
 
 PIXEL_SIZE_M = 20  # 空间分辨率
+
+apply_report_style()
 
 
 def percentile_stretch(rgb, lo=2, hi=98):
@@ -152,7 +156,7 @@ def main():
     # 聚类叠加
     ax.imshow(overlay, extent=(0, W, H, 0), interpolation="nearest")
 
-    # ---- 5. C1 alteration candidate 高亮 ----
+    # ---- 5. C1 candidate clue highlight ----
     c1_mask = labels == 1
     c1_mask = clean_mask(c1_mask)
     contour_pts = find_contour_outline(c1_mask)
@@ -162,7 +166,7 @@ def main():
             rng = np.random.default_rng(42)
             idx = rng.choice(len(contour_pts), size=min(50000, len(contour_pts)), replace=False)
             contour_pts = contour_pts[idx]
-        ax.scatter(contour_pts[:, 1], contour_pts[:, 0], s=0.3, c="red",
+        ax.scatter(contour_pts[:, 1], contour_pts[:, 0], s=0.3, c="#E69F00",
                    alpha=0.7, zorder=8, linewidths=0)
 
     # C1 标注箭头
@@ -172,11 +176,11 @@ def main():
         # 用简单方法：取 mask 的质心
         cy, cx = c1_ys.mean(), c1_xs.mean()
         ax.annotate(
-            "C1: alteration\ncandidate",
+            "C1: candidate clue\nvalidation required",
             xy=(cx, cy), xytext=(cx + 200, cy + 150),
-            fontsize=10, fontweight="bold", color="#d62728",
-            arrowprops=dict(arrowstyle="->", color="#d62728", lw=2, connectionstyle="arc3,rad=0.3"),
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#d62728", alpha=0.9),
+            fontsize=9, fontweight="bold", color="#E69F00",
+            arrowprops=dict(arrowstyle="->", color="#E69F00", lw=1.5, connectionstyle="arc3,rad=0.3"),
+            bbox=dict(boxstyle="square,pad=0.25", facecolor="white", edgecolor="#E69F00", alpha=0.9),
             zorder=11,
         )
 
@@ -214,21 +218,21 @@ def main():
     ax.set_title(
         "Remote Sensing Geological Interpretation Map\n"
         "Tuwu–Yandong, Hami, Xinjiang  |  Sentinel-2A 2024-08-13  |  B12/B8A/B02",
-        fontsize=12, fontweight="bold", pad=12,
+        fontsize=9, fontweight="bold", pad=10,
     )
 
     # 坐标轴标注（像素坐标 + 地理标记说明）
-    ax.set_xlabel("Column (20 m pixel)", fontsize=9)
-    ax.set_ylabel("Row (20 m pixel)", fontsize=9)
+    ax.set_xlabel("Column / 20 m pixel")
+    ax.set_ylabel("Row / 20 m pixel")
     ax.tick_params(labelsize=7)
 
     # 图件说明
     ax.text(
         0.5, -0.06,
-        "Base map: Sentinel-2 B12(2190nm)/B8A(865nm)/B02(490nm) geology false-color composite.\n"
+        "Base map: Sentinel-2 B12 (2190 nm)/B8A (865 nm)/B02 (490 nm) geology false-color composite.\n"
         "Overlay: SAE z=5, k=6 clustering result (45% transparency). "
-        "C1 (red outline) shows lowest B11/B12 ratio, interpreted as hydrothermal alteration candidate.\n"
-        "Generated with Python/rasterio/matplotlib — fully reproducible.",
+        "C1 (orange outline) is retained as a spectral-spatial candidate clue requiring validation.\n"
+        "Generated with Python/rasterio/matplotlib - fully reproducible.",
         transform=ax.transAxes, ha="center", va="top",
         fontsize=7, color="gray", style="italic",
     )
@@ -237,8 +241,8 @@ def main():
     fig.tight_layout()
     out_png = OUT_DIR / "python_final_interpretation_map.png"
     out_pdf = OUT_DIR / "python_final_interpretation_map.pdf"
-    fig.savefig(out_png, dpi=300, bbox_inches="tight")
-    fig.savefig(out_pdf, dpi=300, bbox_inches="tight")
+    fig.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
+    fig.savefig(out_pdf, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
     print(f"Saved: {out_png}")

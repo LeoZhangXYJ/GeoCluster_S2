@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 
+from plot_style import DPI_LINE, DPI_RASTER, apply_report_style
+
 
 ROOT = Path(__file__).parent.parent.resolve()
 PROCESSED = ROOT / "data" / "processed"
@@ -21,6 +23,8 @@ REF_TIF = PROCESSED / "s2_tuwu_yandong_20240813_stack_20m_masked.tif"
 RANDOM_STATE = 42
 SAMPLE_SIZE = 200_000
 K_RANGE = list(range(2, 13))
+
+apply_report_style()
 
 
 def choose_elbow_by_max_distance(k_values, inertias):
@@ -63,7 +67,7 @@ def save_cluster_png(label_map, out_png):
     plt.axis("off")
     plt.title("K-means clustering result")
     plt.tight_layout()
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 
@@ -128,14 +132,15 @@ def main():
 
     # 5. 保存 elbow 图
     plt.figure(figsize=(7, 5))
-    plt.plot(K_RANGE, inertias, marker="o")
-    plt.axvline(k_auto, linestyle="--", label=f"auto k = {k_auto}")
-    plt.xlabel("Number of clusters k")
-    plt.ylabel("Inertia")
+    plt.plot(K_RANGE, inertias, marker="o", linewidth=1.5)
+    plt.axvline(k_auto, linestyle="--", linewidth=1.2, color="0.35", label=f"auto k = {k_auto}")
+    plt.xlabel("Number of clusters, k / count")
+    plt.ylabel("Inertia / 1")
     plt.title("Elbow curve for K-means")
-    plt.legend()
+    plt.grid(axis="y", alpha=0.15)
+    plt.legend(frameon=False)
     plt.tight_layout()
-    plt.savefig(OUT_DIR / "elbow_curve.png", dpi=300)
+    plt.savefig(OUT_DIR / "elbow_curve.png", dpi=DPI_LINE)
     plt.close()
 
     # 6. 用自动选择的 k 对所有有效像元预测

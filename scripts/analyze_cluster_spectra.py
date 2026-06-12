@@ -6,6 +6,8 @@ import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 
+from plot_style import COLORBLIND_PALETTE, DPI_LINE, apply_report_style
+
 ROOT = Path(__file__).parent.parent.resolve()
 OUT_DIR = ROOT / "results" / "cluster_spectra"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,6 +26,8 @@ RATIO_PAIRS = [
 ]
 MAX_SAMPLE_PER_CLUSTER = 100_000
 RANDOM_STATE = 42
+
+apply_report_style()
 
 
 def main():
@@ -56,7 +60,7 @@ def main():
     ratio_rows = []
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    colors = plt.cm.tab10(np.linspace(0, 1, len(cluster_ids)))
+    colors = COLORBLIND_PALETTE[:len(cluster_ids)]
 
     for idx, cid in enumerate(sorted(cluster_ids)):
         mask = labels_flat == cid
@@ -135,12 +139,12 @@ def main():
 
     # 5. 保存光谱曲线图
     ax.set_xticks(range(n_bands))
-    ax.set_xticklabels(BAND_NAMES, fontsize=9)
-    ax.set_xlabel("Band", fontsize=12)
-    ax.set_ylabel("Surface Reflectance", fontsize=12)
-    ax.set_title("Mean Spectral Profiles by Cluster (SAE z=5, k=6)", fontsize=13)
-    ax.legend(fontsize=8, ncol=2, loc="upper left")
-    ax.grid(True, alpha=0.3)
+    ax.set_xticklabels(BAND_NAMES, fontsize=8)
+    ax.set_xlabel("Band / Sentinel-2 MSI")
+    ax.set_ylabel("Surface reflectance / 1")
+    ax.set_title("Mean spectral profiles by cluster (SAE z=5, k=6)")
+    ax.legend(fontsize=8, ncol=2, loc="upper left", frameon=False)
+    ax.grid(axis="y", alpha=0.15)
 
     # 标注 SWIR 特征吸收区域
     ax.axvspan(7.5, 9.5, color="gray", alpha=0.08)
@@ -148,8 +152,8 @@ def main():
             ha="center", va="top", color="gray")
 
     fig.tight_layout()
-    fig.savefig(OUT_DIR / "cluster_spectral_profiles.png", dpi=300)
-    fig.savefig(OUT_DIR / "cluster_spectral_profiles.pdf", dpi=300)
+    fig.savefig(OUT_DIR / "cluster_spectral_profiles.png", dpi=DPI_LINE)
+    fig.savefig(OUT_DIR / "cluster_spectral_profiles.pdf", dpi=DPI_LINE)
     plt.close()
 
     # 6. 保存带误差棒的单独大图（每类一条）
@@ -176,13 +180,13 @@ def main():
                   linewidth=1.5, markersize=4)
         ax_i.set_xticks(range(n_bands))
         ax_i.set_xticklabels(BAND_NAMES, fontsize=7, rotation=45)
-        ax_i.set_title(f"Cluster {cid} ({n_pix / n_total:.1%})", fontsize=10)
-        ax_i.grid(True, alpha=0.3)
+        ax_i.set_title(f"Cluster {cid} ({n_pix / n_total:.1%})", fontsize=9)
+        ax_i.grid(axis="y", alpha=0.15)
         ax_i.axvspan(7.5, 9.5, color="gray", alpha=0.08)
 
-    fig.suptitle("Spectral Profiles per Cluster (SAE z=5, k=6)", fontsize=13, y=1.01)
+    fig.suptitle("Spectral profiles per cluster (SAE z=5, k=6)", fontsize=9, y=1.01)
     fig.tight_layout()
-    fig.savefig(OUT_DIR / "cluster_spectral_profiles_per_class.png", dpi=300)
+    fig.savefig(OUT_DIR / "cluster_spectral_profiles_per_class.png", dpi=DPI_LINE)
     plt.close()
 
     # 7. 打印关键比值摘要

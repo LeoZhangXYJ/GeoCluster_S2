@@ -10,6 +10,8 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 
+from plot_style import DPI_LINE, DPI_RASTER, apply_report_style
+
 
 ROOT = Path(__file__).parent.parent.resolve()
 PROCESSED = ROOT / "data" / "processed"
@@ -23,6 +25,8 @@ REF_TIF = PROCESSED / "s2_tuwu_yandong_20240813_stack_20m_masked.tif"
 RANDOM_STATE = 42
 METRIC_SAMPLE = 100_000  # 抽样计算聚类指标，避免 OOM
 
+apply_report_style()
+
 
 def save_cluster_png(label_map, out_png, title):
     img = label_map.astype(np.float32)
@@ -32,7 +36,7 @@ def save_cluster_png(label_map, out_png, title):
     plt.axis("off")
     plt.title(title)
     plt.tight_layout()
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 
@@ -77,23 +81,23 @@ def main():
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    ax1.bar(range(1, d + 1), pca_full.explained_variance_ratio_)
-    ax1.set_xlabel("Principal Component")
-    ax1.set_ylabel("Explained Variance Ratio")
+    ax1.bar(range(1, d + 1), pca_full.explained_variance_ratio_, color="#0072B2", edgecolor="0.25", linewidth=0.4)
+    ax1.set_xlabel("Principal component / index")
+    ax1.set_ylabel("Explained variance ratio / 1")
     ax1.set_title("PCA Explained Variance per Component")
     ax1.set_xticks(range(1, d + 1))
 
-    ax2.plot(range(1, d + 1), cumsum_var, marker="o")
-    ax2.axhline(0.95, color="gray", linestyle="--", label="95% threshold")
-    ax2.axhline(0.99, color="gray", linestyle=":", label="99% threshold")
-    ax2.set_xlabel("Number of Components")
-    ax2.set_ylabel("Cumulative Explained Variance")
+    ax2.plot(range(1, d + 1), cumsum_var, marker="o", color="#E69F00", linewidth=1.5)
+    ax2.axhline(0.95, color="0.45", linestyle="--", linewidth=1.2, label="95% threshold")
+    ax2.axhline(0.99, color="0.45", linestyle=":", linewidth=1.2, label="99% threshold")
+    ax2.set_xlabel("Number of components / count")
+    ax2.set_ylabel("Cumulative explained variance / 1")
     ax2.set_title("PCA Cumulative Explained Variance")
-    ax2.legend()
+    ax2.legend(frameon=False)
     ax2.set_xticks(range(1, d + 1))
 
     plt.tight_layout()
-    plt.savefig(OUT_DIR / "pca_explained_variance.png", dpi=300)
+    plt.savefig(OUT_DIR / "pca_explained_variance.png", dpi=DPI_LINE)
     plt.close()
 
     # 保存 PCA 方差数据

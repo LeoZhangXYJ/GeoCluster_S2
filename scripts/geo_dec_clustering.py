@@ -33,6 +33,8 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
+from plot_style import DPI_LINE, DPI_RASTER, apply_report_style
+
 
 ROOT = Path(__file__).parent.parent.resolve()
 PROCESSED = ROOT / "data" / "processed"
@@ -62,6 +64,8 @@ ENCODE_BATCH_SIZE = int(os.getenv("GEODEC_ENCODE_BATCH_SIZE", "65536"))
 QUICK_PIXELS = int(os.getenv("GEODEC_QUICK_PIXELS", "0"))
 KMEANS_N_INIT = int(os.getenv("GEODEC_KMEANS_N_INIT", "10"))
 PROGRESS_EVERY = int(os.getenv("GEODEC_PROGRESS_EVERY", "10"))
+
+apply_report_style()
 
 
 def format_seconds(seconds):
@@ -353,25 +357,27 @@ def save_cluster_png(label_map, out_png):
     plt.axis("off")
     plt.title(f"Geo-DEC clustering result, k={K}, z={BOTTLENECK_DIM}")
     plt.tight_layout()
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 
 def save_loss_plot(pretrain_losses, dec_recon_losses, dec_kl_losses):
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    axes[0].plot(range(1, len(pretrain_losses) + 1), pretrain_losses, marker="o")
-    axes[0].set_xlabel("Pretrain epoch")
-    axes[0].set_ylabel("Reconstruction MSE")
+    axes[0].plot(range(1, len(pretrain_losses) + 1), pretrain_losses, marker="o", color="#0072B2", linewidth=1.5)
+    axes[0].set_xlabel("Pretrain epoch / count")
+    axes[0].set_ylabel("Reconstruction MSE / 1")
     axes[0].set_title("Geo-DEC AE pretraining loss")
+    axes[0].grid(axis="y", alpha=0.15)
 
-    axes[1].plot(range(1, len(dec_recon_losses) + 1), dec_recon_losses, marker="o", label="Recon MSE")
-    axes[1].plot(range(1, len(dec_kl_losses) + 1), dec_kl_losses, marker="s", label="DEC KL")
-    axes[1].set_xlabel("DEC epoch")
+    axes[1].plot(range(1, len(dec_recon_losses) + 1), dec_recon_losses, marker="o", color="#0072B2", linewidth=1.5, label="Recon MSE")
+    axes[1].plot(range(1, len(dec_kl_losses) + 1), dec_kl_losses, marker="s", color="#E69F00", linewidth=1.5, label="DEC KL")
+    axes[1].set_xlabel("DEC epoch / count")
     axes[1].set_title("Geo-DEC fine-tuning losses")
-    axes[1].legend()
+    axes[1].grid(axis="y", alpha=0.15)
+    axes[1].legend(frameon=False)
 
     fig.tight_layout()
-    fig.savefig(OUT_DIR / f"geo_dec_training_loss_z{BOTTLENECK_DIM}.png", dpi=300)
+    fig.savefig(OUT_DIR / f"geo_dec_training_loss_z{BOTTLENECK_DIM}.png", dpi=DPI_LINE)
     plt.close(fig)
 
     with open(OUT_DIR / f"geo_dec_training_loss_z{BOTTLENECK_DIM}.csv", "w", newline="", encoding="utf-8") as f:

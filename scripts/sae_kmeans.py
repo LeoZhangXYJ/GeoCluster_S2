@@ -12,6 +12,8 @@ import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 
+from plot_style import DPI_LINE, DPI_RASTER, apply_report_style
+
 
 ROOT = Path(__file__).parent.parent.resolve()
 PROCESSED = ROOT / "data" / "processed"
@@ -29,6 +31,8 @@ TRAIN_SAMPLE_SIZE = 300_000
 BATCH_SIZE = 4096
 EPOCHS = 30
 LR = 1e-3
+
+apply_report_style()
 
 
 class SAE(nn.Module):
@@ -69,7 +73,7 @@ def save_cluster_png(label_map, out_png):
     plt.axis("off")
     plt.title(f"SAE + K-means clustering result, k={K}")
     plt.tight_layout()
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 
@@ -135,12 +139,13 @@ def main():
 
     # 4. 保存 loss 曲线
     plt.figure(figsize=(7, 5))
-    plt.plot(range(1, EPOCHS + 1), loss_log, marker="o")
-    plt.xlabel("Epoch")
-    plt.ylabel("Reconstruction MSE")
+    plt.plot(range(1, EPOCHS + 1), loss_log, marker="o", color="#0072B2", linewidth=1.5)
+    plt.xlabel("Epoch / count")
+    plt.ylabel("Reconstruction MSE / 1")
     plt.title("SAE training loss")
+    plt.grid(axis="y", alpha=0.15)
     plt.tight_layout()
-    plt.savefig(OUT_DIR / f"sae_training_loss_z{BOTTLENECK_DIM}.png", dpi=300)
+    plt.savefig(OUT_DIR / f"sae_training_loss_z{BOTTLENECK_DIM}.png", dpi=DPI_LINE)
     plt.close()
 
     with open(OUT_DIR / f"sae_training_loss_z{BOTTLENECK_DIM}.csv", "w", newline="", encoding="utf-8") as f:

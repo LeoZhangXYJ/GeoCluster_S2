@@ -13,6 +13,8 @@ import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 
+from plot_style import DPI_LINE, DPI_RASTER, apply_report_style
+
 
 ROOT = Path(__file__).parent.parent.resolve()
 PROCESSED = ROOT / "data" / "processed"
@@ -31,6 +33,8 @@ BATCH_SIZE = 4096
 EPOCHS = 30
 LR = 1e-3
 METRIC_SAMPLE = 100_000
+
+apply_report_style()
 
 
 class CanonicalAE(nn.Module):
@@ -68,7 +72,7 @@ def save_cluster_png(label_map, out_png, title):
     plt.axis("off")
     plt.title(title)
     plt.tight_layout()
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
+    plt.savefig(out_png, dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 
@@ -149,12 +153,13 @@ def main():
 
     # 4. 保存 loss 曲线
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.plot(range(1, EPOCHS + 1), loss_log, marker="o")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Reconstruction MSE")
+    ax.plot(range(1, EPOCHS + 1), loss_log, marker="o", color="#0072B2", linewidth=1.5)
+    ax.set_xlabel("Epoch / count")
+    ax.set_ylabel("Reconstruction MSE / 1")
     ax.set_title(f"Canonical AE training loss (z={BOTTLENECK_DIM})")
+    ax.grid(axis="y", alpha=0.15)
     fig.tight_layout()
-    fig.savefig(OUT_DIR / f"ae_training_loss_z{BOTTLENECK_DIM}.png", dpi=300)
+    fig.savefig(OUT_DIR / f"ae_training_loss_z{BOTTLENECK_DIM}.png", dpi=DPI_LINE)
     plt.close()
 
     with open(OUT_DIR / f"ae_training_loss_z{BOTTLENECK_DIM}.csv", "w", newline="", encoding="utf-8") as f:

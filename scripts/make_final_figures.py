@@ -2,6 +2,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+from plot_style import DPI_RASTER, apply_report_style
+
 ROOT = Path(__file__).parent.parent.resolve()
 
 processed = ROOT / "data" / "processed"
@@ -12,6 +14,8 @@ sae_dir = ROOT / "results" / "cluster_sae"
 geo_dec_dir = ROOT / "results" / "cluster_geo_dec"
 out_dir = ROOT / "results" / "final_figures"
 out_dir.mkdir(exist_ok=True)
+
+apply_report_style()
 
 
 def existing_items(items):
@@ -29,7 +33,7 @@ def existing_items(items):
     return existing
 
 
-def save_grid(items, nrows, ncols, figsize, out_stem, title_size=12):
+def save_grid(items, nrows, ncols, figsize, out_stem, title_size=9):
     items = existing_items(items)
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
     axes_flat = axes.ravel() if hasattr(axes, "ravel") else [axes]
@@ -44,8 +48,8 @@ def save_grid(items, nrows, ncols, figsize, out_stem, title_size=12):
         ax.axis("off")
 
     plt.tight_layout()
-    plt.savefig(out_dir / f"{out_stem}.png", dpi=300, bbox_inches="tight")
-    plt.savefig(out_dir / f"{out_stem}.pdf", dpi=300, bbox_inches="tight")
+    plt.savefig(out_dir / f"{out_stem}.png", dpi=DPI_RASTER, bbox_inches="tight")
+    plt.savefig(out_dir / f"{out_stem}.pdf", dpi=DPI_RASTER, bbox_inches="tight")
     plt.close()
 
 # === 2×3 综合对比图 ===
@@ -63,12 +67,12 @@ fig, axes = plt.subplots(2, 3, figsize=(18, 10))
 for ax, (title, path) in zip(axes.ravel(), items_2x3):
     img = mpimg.imread(path)
     ax.imshow(img)
-    ax.set_title(title, fontsize=11)
+    ax.set_title(title, fontsize=9)
     ax.axis("off")
 
 plt.tight_layout()
-plt.savefig(out_dir / "final_comparison_2x3.png", dpi=300, bbox_inches="tight")
-plt.savefig(out_dir / "final_comparison_2x3.pdf", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x3.png", dpi=DPI_RASTER, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x3.pdf", dpi=DPI_RASTER, bbox_inches="tight")
 plt.close()
 
 # === 2x3 comparison with the proposed Geo-DEC method ===
@@ -87,7 +91,7 @@ save_grid(
     ncols=3,
     figsize=(18, 10),
     out_stem="method_comparison_2x3_geo_dec",
-    title_size=11,
+    title_size=9,
 )
 
 # === 2×2 四合一对比图（保持兼容旧版） ===
@@ -103,12 +107,12 @@ fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 for ax, (title, path) in zip(axes.ravel(), items_2x2):
     img = mpimg.imread(path)
     ax.imshow(img)
-    ax.set_title(title, fontsize=12)
+    ax.set_title(title, fontsize=9)
     ax.axis("off")
 
 plt.tight_layout()
-plt.savefig(out_dir / "final_comparison_2x2.png", dpi=300, bbox_inches="tight")
-plt.savefig(out_dir / "final_comparison_2x2.pdf", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x2.png", dpi=DPI_RASTER, bbox_inches="tight")
+plt.savefig(out_dir / "final_comparison_2x2.pdf", dpi=DPI_RASTER, bbox_inches="tight")
 plt.close()
 
 # === 三方法聚类对比图（Raw / PCA / AE / SAE） ===
@@ -124,12 +128,12 @@ fig, axes = plt.subplots(2, 2, figsize=(14, 12))
 for ax, (title, path) in zip(axes.ravel(), items_4methods):
     img = mpimg.imread(path)
     ax.imshow(img)
-    ax.set_title(title, fontsize=12)
+    ax.set_title(title, fontsize=9)
     ax.axis("off")
 
 plt.tight_layout()
-plt.savefig(out_dir / "method_comparison_2x2.png", dpi=300, bbox_inches="tight")
-plt.savefig(out_dir / "method_comparison_2x2.pdf", dpi=300, bbox_inches="tight")
+plt.savefig(out_dir / "method_comparison_2x2.png", dpi=DPI_RASTER, bbox_inches="tight")
+plt.savefig(out_dir / "method_comparison_2x2.pdf", dpi=DPI_RASTER, bbox_inches="tight")
 plt.close()
 
 # === Five-method comparison for the updated report ===
@@ -147,7 +151,7 @@ save_grid(
     ncols=3,
     figsize=(18, 10),
     out_stem="method_comparison_5methods",
-    title_size=11,
+    title_size=9,
 )
 
 print("Saved to:", out_dir)
