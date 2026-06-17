@@ -4,6 +4,11 @@
 
 项目还新增了地质云 1:250,000 高光谱遥感矿物分布图的配准、拼接与辅助叠加验证流程，用于检查聚类图斑与白云母、绿泥石、碳酸盐、铁氧化物等矿物异常线索之间的空间关系。需要注意的是，该矿物图仅作为定性空间一致性辅助材料，不作为传统岩性地质图或精度评价真值。
 
+## 项目流程
+- 2026.5.30 完成Baseline搭建
+- 2026.6.11 新增GEO-DEC方法
+- 2026.6.16 寻找相关地区地质图(地址云上找不到区域地质图-需要权限)，用地质云高光谱矿物图替代
+
 ## 参考论文
 
 > Naagar, S., Chawla, S., Bhattacharya, A., et al. _Remote sensing framework for geological mapping via stacked autoencoders and clustering._ Advances in Space Research, 2024, 74(10): 4502-4516.
@@ -138,7 +143,6 @@ make
 git add -f results/geology_validation/mineral_maps/mineral_map_validation_panel.png
 ```
 
-- 不要提交 `.codex_tmp/`，该目录只是临时工作区状态。
 
 ## 模板致谢
 
